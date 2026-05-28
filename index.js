@@ -4,11 +4,20 @@ const {
   SlashCommandBuilder,
   REST,
   Routes,
+  AttachmentBuilder,
   EmbedBuilder
 } = require("discord.js");
 
-const TOKEN = process.env.TOKEN;
-const CLIENT_ID = process.env.CLIENT_ID;
+const Canvas = require("canvas");
+const GIFEncoder = require("gifencoder");
+const fs = require("fs");
+
+// ================= CONFIG =================
+
+const TOKEN = "DEIN_TOKEN";
+const CLIENT_ID = "DEINE_CLIENT_ID";
+
+// ================= BOT =================
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
@@ -29,34 +38,20 @@ function getCoins(userId) {
 
 function addCoins(userId, amount) {
 
-  const current = getCoins(userId);
-
-  coins.set(userId, current + amount);
+  coins.set(
+    userId,
+    getCoins(userId) + amount
+  );
 }
 
 // ================= SYMBOLS =================
 
 const symbols = [
-  {
-    icon: "🍋",
-    multi: 1.5
-  },
-  {
-    icon: "🍒",
-    multi: 2
-  },
-  {
-    icon: "🔔",
-    multi: 5
-  },
-  {
-    icon: "BAR",
-    multi: 10
-  },
-  {
-    icon: "7️⃣",
-    multi: 25
-  }
+  { icon: "🍋", multi: 2 },
+  { icon: "🍒", multi: 3 },
+  { icon: "🔔", multi: 5 },
+  { icon: "BAR", multi: 10 },
+  { icon: "7️⃣", multi: 25 }
 ];
 
 function randomSymbol() {
@@ -66,13 +61,13 @@ function randomSymbol() {
   ];
 }
 
-// ================= COMMANDS =================
+// ================= COMMAND =================
 
 const commands = [
 
   new SlashCommandBuilder()
     .setName("slot")
-    .setDescription("🎰 Slot spielen")
+    .setDescription("🎰 3x3 Slot")
     .addIntegerOption(option =>
       option
         .setName("einsatz")
@@ -82,9 +77,9 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName("coins")
-    .setDescription("💰 Zeigt deine Coins")
+    .setDescription("💰 Zeigt Coins")
 
-].map(command => command.toJSON());
+].map(c => c.toJSON());
 
 // ================= REGISTER =================
 
@@ -132,7 +127,7 @@ client.on("interactionCreate", async interaction => {
   if (interaction.commandName === "coins") {
 
     return interaction.reply({
-      content: `💰 Du hast ${getCoins(interaction.user.id)} Coins.`,
+      content: `💰 Coins: ${getCoins(interaction.user.id)}`,
       ephemeral: true
     });
   }
@@ -145,7 +140,6 @@ client.on("interactionCreate", async interaction => {
 
     const userId = interaction.user.id;
 
-    // CHECKS
     if (bet <= 0) {
 
       return interaction.reply({
@@ -162,42 +156,113 @@ client.on("interactionCreate", async interaction => {
       });
     }
 
-    // BET ABZIEHEN
     addCoins(userId, -bet);
 
-    await interaction.reply("🎰 Dreht...");
+    await interaction.deferReply();
 
-    // ANIMATION
-    for (let i = 0; i < 5; i++) {
+    // FINAL GRID
+    const grid = [];
 
-      const a = randomSymbol().icon;
-      const b = randomSymbol().icon;
-      const c = randomSymbol().icon;
+    for (let row = 0; row < 3; row++) {
 
-      await new Promise(resolve =>
-        setTimeout(resolve, 700)
-      );
+      const currentRow = [];
 
-      await interaction.editReply(
-        `🎰 | ${a} | ${b} | ${c} |`
-      );
+      for (let col = 0; col < 3; col++) {
+        currentRow.push(randomSymbol());
+      }
+
+      grid.push(currentRow);
     }
 
-    // FINAL
-    const s1 = randomSymbol();
-    const s2 = randomSymbol();
-    const s3 = randomSymbol();
+    // GIF
+    const width = 420;
+    const height = 420;
 
+    const canvas = Canvas.createCanvas(width, height);
+
+    const ctx = canvas.getContext("2d");
+
+    const encoder = new GIFEncoder(width, height);
+
+    const path = `slot-${userId}.gif`;
+
+    encoder.createReadStream().pipe(
+      fs.createWriteStream(path)
+    );
+
+    encoder.start();
+    encoder.setRepeat(0);
+    encoder.setDelay(80);
+    encoder.setQuality(10);
+
+    // ANIMATION
+    for (let frame = 0; frame < 25; frame++) {
+
+      // BG
+      ctx.fillStyle = "#111";
+      ctx.fillRect(0, 0, width, height);
+
+      // TITLE
+      ctx.fillStyle = "gold";
+      ctx.font = "bold 40px Arial";
+
+      ctx.fillText("🎰 SLOT", 120, 50);
+
+      // GRID
+      for (let row = 0; row < 3; row++) {
+
+        for (let col = 0; col < 3; col++) {
+
+          const x = 50 + col * 110;
+          const y = 90 + row * 100;
+
+          ctx.fillStyle = "white";
+
+          ctx.fillRect(x, y, 90, 90);
+
+          let symbol;
+
+          // STOP ANIMATION
+          if (frame > 20) {
+
+            symbol = grid[row][col].icon;
+
+          } else {
+
+            symbol = randomSymbol().icon;
+          }
+
+          ctx.fillStyle = "black";
+          ctx.font = "50px Arial";
+
+          ctx.fillText(
+            symbol,
+            x + 15,
+            y + 58
+          );
+        }
+      }
+
+      encoder.addFrame(ctx);
+    }
+
+    encoder.finish();
+
+    // WIN CHECK
     let winnings = 0;
 
+    // MITTLERE REIHE
+    const middle = grid[1];
+
     if (
-      s1.icon === s2.icon &&
-      s2.icon === s3.icon
+      middle[0].icon === middle[1].icon &&
+      middle[1].icon === middle[2].icon
     ) {
 
-      winnings = Math.floor(
-        bet * s1.multi
-      );
+      winnings =
+        Math.floor(
+          bet * middle[0].multi
+        );
 
       addCoins(userId, winnings);
     }
@@ -206,31 +271,36 @@ client.on("interactionCreate", async interaction => {
     const embed = new EmbedBuilder()
       .setTitle("🎰 SLOT RESULT")
       .setDescription(
-        `| ${s1.icon} | ${s2.icon} | ${s3.icon} |`
+        winnings > 0
+          ? `🎉 Gewinn: ${winnings} Coins`
+          : `❌ Verloren: ${bet} Coins`
       )
-      .addFields(
-        {
-          name: "💰 Ergebnis",
-          value:
-            winnings > 0
-              ? `Gewonnen: ${winnings} Coins`
-              : `Verloren: ${bet} Coins`
-        },
-        {
-          name: "🪙 Kontostand",
-          value: `${getCoins(userId)} Coins`
-        }
-      )
+      .addFields({
+        name: "💰 Kontostand",
+        value: `${getCoins(userId)} Coins`
+      })
       .setColor(
         winnings > 0
           ? "Gold"
           : "Red"
       );
 
+    // SEND
+    const attachment = new AttachmentBuilder(path);
+
     await interaction.editReply({
-      content: "",
-      embeds: [embed]
+      embeds: [embed],
+      files: [attachment]
     });
+
+    // DELETE
+    setTimeout(() => {
+
+      if (fs.existsSync(path)) {
+        fs.unlinkSync(path);
+      }
+
+    }, 5000);
   }
 
 });
