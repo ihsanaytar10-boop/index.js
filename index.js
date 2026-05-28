@@ -152,10 +152,13 @@ client.on("interactionCreate", async interaction => {
 
   // ================= COINS =================
 
-  if (interaction.commandName === "coins") {
-    return interaction.reply(`💰 Coins: ${getCoins(id)}`);
-  }
-
+if (interaction.commandName === "slot") {
+  await interaction.reply({
+    content: "A\nB\nC"
+  });
+  return;
+}
+  
   // ================= DAILY =================
 
   if (interaction.commandName === "daily") {
