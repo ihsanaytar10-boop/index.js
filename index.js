@@ -6,12 +6,12 @@ const {
   Routes
 } = require("discord.js");
 
+const TOKEN = process.env.TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
+
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
-
-const TOKEN = process.env.TOKEN;
-const CLIENT_ID = process.env.CLIENT_ID;
 
 const coins = new Map();
 const symbols = ["🍒", "🍋", "⭐", "7️⃣"];
@@ -24,11 +24,11 @@ function getCoins(id) {
 const commands = [
   new SlashCommandBuilder()
     .setName("slot")
-    .setDescription("Slot spielen")
+    .setDescription("🎰 Slot")
     .addIntegerOption(o =>
       o.setName("einsatz")
-       .setDescription("Coins")
-       .setRequired(true)
+        .setDescription("Coins")
+        .setRequired(true)
     )
 ].map(c => c.toJSON());
 
@@ -66,36 +66,31 @@ client.on("interactionCreate", async interaction => {
     const r = () =>
       symbols[Math.floor(Math.random() * symbols.length)];
 
-    const a = r();
-    const b = r();
-    const c = r();
+    const row1 = `${r()} ${r()} ${r()}`;
+    const row2 = `${r()} ${r()} ${r()}`;
+    const row3 = `${r()} ${r()} ${r()}`;
 
-    const d = r();
-    const e = r();
-    const f = r();
+    let result = "❌ Verloren";
 
-    const g = r();
-    const h = r();
-    const i = r();
+    const middle = row2.split(" ");
 
-    let text = "❌ Verloren";
-
-    if (d === e && e === f) {
+    if (
+      middle[0] === middle[1] &&
+      middle[1] === middle[2]
+    ) {
       coins.set(user, getCoins(user) + bet * 3);
-      text = "🎉 Gewonnen";
+      result = "🎉 Gewonnen";
     }
 
     interaction.reply({
       content:
-`🎰
-
-${a} ${b} ${c}
-${d} ${e} ${f}
-${g} ${h} ${i}
-
-${text}
-
-💰 ${getCoins(user)}`
+"```txt\n" +
+row1 + "\n" +
+row2 + "\n" +
+row3 +
+"\n```\n" +
+result +
+`\n💰 ${getCoins(user)}`
     });
   }
 });
