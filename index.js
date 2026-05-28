@@ -7,14 +7,13 @@ const {
   EmbedBuilder
 } = require("discord.js");
 
-const Canvas = require("canvas");
-const GIFEncoder = require("gifencoder");
-const fs = require("fs");
-
 // ================= CONFIG =================
 
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
+
+// NUR DIESER CHANNEL
+const ALLOWED_CHANNEL = "DEINE_CHANNEL_ID";
 
 // ================= BOT =================
 
@@ -121,6 +120,16 @@ client.on("interactionCreate", async interaction => {
 
   if (!interaction.isChatInputCommand()) return;
 
+  // ================= CHANNEL CHECK =================
+
+  if (interaction.channel.id !== ALLOWED_CHANNEL) {
+
+    return interaction.reply({
+      content: "❌ Der Bot funktioniert nur im Casino-Channel.",
+      ephemeral: true
+    });
+  }
+
   // ================= COINS =================
 
   if (interaction.commandName === "coins") {
@@ -155,11 +164,46 @@ client.on("interactionCreate", async interaction => {
       });
     }
 
+    // COINS ABZIEHEN
     addCoins(userId, -bet);
 
-    await interaction.deferReply();
+    await interaction.reply("🎰 Dreht...");
 
-    // ================= GRID =================
+    // ANIMATION
+    for (let i = 0; i < 5; i++) {
+
+      const tempGrid = [];
+
+      for (let row = 0; row < 3; row++) {
+
+        let rowText = "";
+
+        for (let col = 0; col < 3; col++) {
+
+          rowText += randomSymbol().icon + " ";
+
+        }
+
+        tempGrid.push(rowText);
+      }
+
+      await new Promise(resolve =>
+        setTimeout(resolve, 700)
+      );
+
+      await interaction.editReply({
+
+        content:
+`🎰 **SLOT MACHINE** 🎰
+
+${tempGrid[0]}
+${tempGrid[1]}
+${tempGrid[2]}`
+
+      });
+    }
+
+    // ================= FINAL GRID =================
 
     const grid = [];
 
@@ -175,93 +219,6 @@ client.on("interactionCreate", async interaction => {
 
       grid.push(currentRow);
     }
-
-    // ================= GIF =================
-
-    const width = 450;
-    const height = 450;
-
-    const canvas = Canvas.createCanvas(width, height);
-    const ctx = canvas.getContext("2d");
-
-    const encoder = new GIFEncoder(width, height);
-
-    const path = `slot-${userId}.gif`;
-
-    encoder.createReadStream().pipe(
-      fs.createWriteStream(path)
-    );
-
-    encoder.start();
-
-    encoder.setRepeat(0);
-    encoder.setDelay(90);
-    encoder.setQuality(10);
-
-    // ================= ANIMATION =================
-
-    for (let frame = 0; frame < 25; frame++) {
-
-      // Hintergrund
-      ctx.fillStyle = "#111";
-      ctx.fillRect(0, 0, width, height);
-
-      // Titel
-      ctx.fillStyle = "gold";
-      ctx.font = "bold 42px Arial";
-
-      ctx.fillText("🎰 SLOT MACHINE", 70, 50);
-
-      // Grid
-      for (let row = 0; row < 3; row++) {
-
-        for (let col = 0; col < 3; col++) {
-
-          const x = 35 + col * 120;
-          const y = 80 + row * 110;
-
-          // Feld
-          ctx.fillStyle = "white";
-          ctx.fillRect(x, y, 100, 100);
-
-          // Rand
-          ctx.strokeStyle = "gold";
-          ctx.lineWidth = 5;
-
-          ctx.strokeRect(x, y, 100, 100);
-
-          let symbol;
-
-          // Animation
-          if (frame > 20) {
-
-            symbol = grid[row][col].icon;
-
-          } else {
-
-            symbol = randomSymbol().icon;
-          }
-
-          // Symbol
-          ctx.fillStyle = "black";
-          ctx.font = "55px Arial";
-
-          ctx.fillText(
-            symbol,
-            x + 18,
-            y + 65
-          );
-        }
-      }
-
-      encoder.addFrame(ctx);
-    }
-
-    encoder.finish();
-
-    await new Promise(resolve =>
-      setTimeout(resolve, 1000)
-    );
 
     // ================= WIN CHECK =================
 
@@ -290,28 +247,41 @@ client.on("interactionCreate", async interaction => {
       }
     }
 
+    // GEWINN GEBEN
     if (winnings > 0) {
 
       addCoins(userId, winnings);
 
     }
 
+    // ================= FINAL GRID TEXT =================
+
+    const finalGrid =
+`${grid[0][0].icon} ${grid[0][1].icon} ${grid[0][2].icon}
+${grid[1][0].icon} ${grid[1][1].icon} ${grid[1][2].icon}
+${grid[2][0].icon} ${grid[2][1].icon} ${grid[2][2].icon}`;
+
     // ================= EMBED =================
 
     const embed = new EmbedBuilder()
       .setTitle("🎰 SLOT RESULT")
-      .setDescription(
+      .setDescription(finalGrid)
+      .addFields(
+        {
+          name: "💰 Ergebnis",
+          value:
 
-        winnings > 0
+            winnings > 0
 
-          ? `🎉 Gewinn: ${winnings} Coins`
+              ? `🎉 Gewinn: ${winnings} Coins`
 
-          : `❌ Verloren: ${bet} Coins`
+              : `❌ Verloren: ${bet} Coins`
+        },
+        {
+          name: "🪙 Kontostand",
+          value: `${getCoins(userId)} Coins`
+        }
       )
-      .addFields({
-        name: "💰 Kontostand",
-        value: `${getCoins(userId)} Coins`
-      })
       .setColor(
 
         winnings > 0
@@ -325,25 +295,11 @@ client.on("interactionCreate", async interaction => {
 
     await interaction.editReply({
 
-      embeds: [embed],
+      content: "",
 
-      files: [{
-        attachment: path,
-        name: "slot.gif"
-      }]
+      embeds: [embed]
+
     });
-
-    // ================= DELETE FILE =================
-
-    setTimeout(() => {
-
-      if (fs.existsSync(path)) {
-
-        fs.unlinkSync(path);
-
-      }
-
-    }, 5000);
   }
 });
 
