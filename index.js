@@ -15,6 +15,7 @@ const client = new Client({
 
 const symbols = ["🍒", "🍋", "⭐", "7️⃣"];
 
+// 🔥 Slash Command OHNE Einsatz
 const commands = [
   new SlashCommandBuilder()
     .setName("slot")
@@ -23,13 +24,18 @@ const commands = [
 
 const rest = new REST({ version: "10" }).setToken(TOKEN);
 
+// 🔥 Commands neu registrieren
 (async () => {
-  await rest.put(
-    Routes.applicationCommands(CLIENT_ID),
-    { body: commands }
-  );
+  try {
+    await rest.put(
+      Routes.applicationCommands(CLIENT_ID),
+      { body: commands }
+    );
 
-  console.log("Commands geladen");
+    console.log("Commands geladen");
+  } catch (err) {
+    console.error(err);
+  }
 })();
 
 client.once("ready", () => {
@@ -48,7 +54,7 @@ client.on("interactionCreate", async interaction => {
     const row2 = `${r()} ${r()} ${r()}`;
     const row3 = `${r()} ${r()} ${r()}`;
 
-    interaction.reply({
+    await interaction.reply({
       content:
 "```txt\n" +
 row1 + "\n" +
