@@ -308,21 +308,25 @@ Nutze:
 
         for (let col = 0; col < 3; col++) {
 
-          rowText += randomSymbol().icon + "   ";
+          rowText += randomSymbol().icon + " ";
 
         }
 
         tempGrid.push(rowText);
+
       }
 
-     await interaction.editReply({
-  content:
-`🎰 SLOT RESULT
+      await interaction.editReply({
+        content:
+`🎰 Dreht...
 
 \`\`\`
-${finalGrid}
+${tempGrid.join("\n")}
 \`\`\``
-});
+      });
+
+      await new Promise(r => setTimeout(r, 500));
+    }
 
     // ================= FINAL GRID =================
 
@@ -369,6 +373,7 @@ ${finalGrid}
     }
 
     // GEWINN GEBEN
+
     if (winnings > 0) {
 
       addCoins(userId, winnings);
