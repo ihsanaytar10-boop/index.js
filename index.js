@@ -33,7 +33,7 @@ function addCoins(id, amount) {
 // ================= DAILY =================
 const daily = new Map();
 
-// ================= SLOT =================
+// ================= SYMBOLS =================
 const symbols = [
   { icon: "🍋", multi: 2 },
   { icon: "🍒", multi: 3 },
@@ -71,11 +71,14 @@ const rest = new REST({ version: "10" }).setToken(TOKEN);
 
 (async () => {
   try {
+    console.log("Commands werden geladen...");
+
     await rest.put(
       Routes.applicationCommands(CLIENT_ID),
       { body: commands }
     );
-    console.log("Commands geladen");
+
+    console.log("Commands geladen.");
   } catch (err) {
     console.error(err);
   }
@@ -92,7 +95,7 @@ client.on("interactionCreate", async interaction => {
 
   if (interaction.channel.id !== ALLOWED_CHANNEL) {
     return interaction.reply({
-      content: "❌ Nur im Casino-Channel!",
+      content: "❌ Nur im Casino Channel!",
       ephemeral: true
     });
   }
@@ -107,9 +110,9 @@ client.on("interactionCreate", async interaction => {
   // ================= DAILY =================
   if (interaction.commandName === "daily") {
     const now = Date.now();
-    const cd = 24 * 60 * 60 * 1000;
+    const cooldown = 24 * 60 * 60 * 1000;
 
-    if (daily.has(userId) && now - daily.get(userId) < cd) {
+    if (daily.has(userId) && now - daily.get(userId) < cooldown) {
       return interaction.reply({
         content: "⏳ Daily schon benutzt!",
         ephemeral: true
@@ -136,9 +139,9 @@ client.on("interactionCreate", async interaction => {
 
     addCoins(userId, -bet);
 
-    await interaction.reply("🎰 Dreht...");
+    // 🔥 WICHTIG: verhindert Unknown Interaction Error
+    await interaction.deferReply();
 
-    // 3x3 Grid
     const grid = [];
     for (let r = 0; r < 3; r++) {
       const row = [];
