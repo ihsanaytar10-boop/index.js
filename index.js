@@ -59,6 +59,57 @@ function randomSymbol() {
   ];
 }
 
+// ================= REGELN =================
+
+const rulesText = `
+🎰 **SLOT REGELN**
+
+💰 Spielen:
+\`/slot einsatz:100\`
+
+━━━━━━━━━━━━━━
+
+🎯 Gewinn bei:
+
+➡️ 3 gleiche horizontal
+➡️ 3 gleiche diagonal
+
+Beispiele:
+
+🍒 🍒 🍒
+🍋 🔔 BAR
+7️⃣ 🍋 🍒
+
+ODER
+
+🍒 🔔 7️⃣
+🍋 🍒 BAR
+7️⃣ 🔔 🍒
+
+━━━━━━━━━━━━━━
+
+💎 Multiplikatoren:
+
+🍋 = x2
+🍒 = x3
+🔔 = x5
+BAR = x10
+7️⃣ = x25
+
+━━━━━━━━━━━━━━
+
+💸 Verlierst du:
+→ Einsatz weg
+
+🏆 Gewinnst du:
+→ Coins automatisch addiert
+
+━━━━━━━━━━━━━━
+
+🪙 Startcoins:
+10000
+`;
+
 // ================= COMMANDS =================
 
 const commands = [
@@ -75,7 +126,11 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName("coins")
-    .setDescription("💰 Zeigt deine Coins")
+    .setDescription("💰 Zeigt deine Coins"),
+
+  new SlashCommandBuilder()
+    .setName("slotregeln")
+    .setDescription("📜 Zeigt die Slot Regeln")
 
 ].map(c => c.toJSON());
 
@@ -130,6 +185,20 @@ client.on("interactionCreate", async interaction => {
     });
   }
 
+  // ================= REGELN =================
+
+  if (interaction.commandName === "slotregeln") {
+
+    const embed = new EmbedBuilder()
+      .setTitle("📜 SLOT REGELN")
+      .setDescription(rulesText)
+      .setColor("Gold");
+
+    return interaction.reply({
+      embeds: [embed]
+    });
+  }
+
   // ================= COINS =================
 
   if (interaction.commandName === "coins") {
@@ -169,7 +238,8 @@ client.on("interactionCreate", async interaction => {
 
     await interaction.reply("🎰 Dreht...");
 
-    // ANIMATION
+    // ================= ANIMATION =================
+
     for (let i = 0; i < 5; i++) {
 
       const tempGrid = [];
@@ -265,22 +335,19 @@ ${grid[2][0].icon} ${grid[2][1].icon} ${grid[2][2].icon}`;
 
     const embed = new EmbedBuilder()
       .setTitle("🎰 SLOT RESULT")
-      .setDescription(finalGrid)
-      .addFields(
-        {
-          name: "💰 Ergebnis",
-          value:
+      .setDescription(
+`${finalGrid}
 
-            winnings > 0
+━━━━━━━━━━━━━━
 
-              ? `🎉 Gewinn: ${winnings} Coins`
+${
+  winnings > 0
+    ? `🎉 Gewinn: ${winnings} Coins`
+    : `❌ Verloren: ${bet} Coins`
+}
 
-              : `❌ Verloren: ${bet} Coins`
-        },
-        {
-          name: "🪙 Kontostand",
-          value: `${getCoins(userId)} Coins`
-        }
+🪙 Kontostand:
+${getCoins(userId)} Coins`
       )
       .setColor(
 
