@@ -372,24 +372,13 @@ ${tempGrid.join("\n")}
       }
     }
 
-    // GEWINN GEBEN
+    // ================= GEWINN =================
 
     if (winnings > 0) {
 
       addCoins(userId, winnings);
 
     }
-
-    // ================= FINAL GRID =================
-
-    const finalGrid =
-`╔════════════════════╗
-║ ${grid[0][0].icon} │ ${grid[0][1].icon} │ ${grid[0][2].icon} ║
-║────────────────────║
-║ ${grid[1][0].icon} │ ${grid[1][1].icon} │ ${grid[1][2].icon} ║
-║────────────────────║
-║ ${grid[2][0].icon} │ ${grid[2][1].icon} │ ${grid[2][2].icon} ║
-╚════════════════════╝`;
 
     // ================= EMBED =================
 
@@ -398,9 +387,13 @@ ${tempGrid.join("\n")}
       .setDescription(
 `# 🎰 SLOT MACHINE
 
-\`\`\`
-${finalGrid}
-\`\`\`
+╔══════════════╗
+║ ${grid[0][0].icon} │ ${grid[0][1].icon} │ ${grid[0][2].icon} ║
+║──────────────║
+║ ${grid[1][0].icon} │ ${grid[1][1].icon} │ ${grid[1][2].icon} ║
+║──────────────║
+║ ${grid[2][0].icon} │ ${grid[2][1].icon} │ ${grid[2][2].icon} ║
+╚══════════════╝
 
 ━━━━━━━━━━━━━━━━━━
 
