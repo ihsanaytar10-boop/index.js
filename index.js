@@ -43,7 +43,7 @@ const rest = new REST({ version: "10" }).setToken(TOKEN);
   console.log("Commands geladen");
 })();
 
-client.once("clientReady", () => {
+client.once("ready", () => {
   console.log("Bot online");
 });
 
@@ -57,7 +57,8 @@ client.on("interactionCreate", async interaction => {
 
     if (bet <= 0 || getCoins(user) < bet) {
       return interaction.reply({
-        content: "❌ Fehler"
+        content: "❌ Fehler",
+        ephemeral: true
       });
     }
 
@@ -70,27 +71,13 @@ client.on("interactionCreate", async interaction => {
     const row2 = `${r()} ${r()} ${r()}`;
     const row3 = `${r()} ${r()} ${r()}`;
 
-    let result = "❌ Verloren";
-
-    const middle = row2.split(" ");
-
-    if (
-      middle[0] === middle[1] &&
-      middle[1] === middle[2]
-    ) {
-      coins.set(user, getCoins(user) + bet * 3);
-      result = "🎉 Gewonnen";
-    }
-
     interaction.reply({
       content:
 "```txt\n" +
 row1 + "\n" +
 row2 + "\n" +
 row3 +
-"\n```\n" +
-result +
-`\n💰 ${getCoins(user)}`
+"\n```"
     });
   }
 });
