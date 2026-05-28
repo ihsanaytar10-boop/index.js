@@ -23,6 +23,19 @@ const client = new Client({
 const coins = new Map();
 const daily = new Map();
 
+// ================= SYMBOLS =================
+
+const symbols = [
+  { icon: "🍒", multi: 2 },
+  { icon: "🍋", multi: 3 },
+  { icon: "🔔", multi: 5 },
+  { icon: "💎", multi: 10 },
+  { icon: "7️⃣", multi: 25 }
+];
+
+const randomSymbol = () =>
+  symbols[Math.floor(Math.random() * symbols.length)];
+
 // ================= COINS =================
 
 function getCoins(id) {
@@ -38,25 +51,12 @@ function addCoins(id, amount) {
   setCoins(id, getCoins(id) + amount);
 }
 
-// ================= SYMBOLS =================
-
-const symbols = [
-  { icon: "🍒", multi: 2 },
-  { icon: "🍋", multi: 3 },
-  { icon: "🔔", multi: 5 },
-  { icon: "💎", multi: 10 },
-  { icon: "7️⃣", multi: 25 }
-];
-
-const randomSymbol = () =>
-  symbols[Math.floor(Math.random() * symbols.length)];
-
 // ================= COMMANDS =================
 
 const commands = [
   new SlashCommandBuilder()
     .setName("slot")
-    .setDescription("🎰 Slot Maschine")
+    .setDescription("🎰 Casino Slot")
     .addIntegerOption(o =>
       o.setName("einsatz")
         .setDescription("Coins setzen")
@@ -69,7 +69,7 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName("daily")
-    .setDescription("🎁 Daily holen")
+    .setDescription("🎁 Daily Coins")
 ].map(c => c.toJSON());
 
 // ================= REGISTER =================
@@ -99,15 +99,16 @@ function makeGrid() {
 }
 
 function formatGrid(grid) {
-  const r1 = `${grid[0][0].icon} │ ${grid[0][1].icon} │ ${grid[0][2].icon}`;
-  const r2 = `${grid[1][0].icon} │ ${grid[1][1].icon} │ ${grid[1][2].icon}`;
-  const r3 = `${grid[2][0].icon} │ ${grid[2][1].icon} │ ${grid[2][2].icon}`;
-  return `${r1}\n${r2}\n${r3}`;
+  return [
+    `${grid[0][0].icon} | ${grid[0][1].icon} | ${grid[0][2].icon}`,
+    `${grid[1][0].icon} | ${grid[1][1].icon} | ${grid[1][2].icon}`,
+    `${grid[2][0].icon} | ${grid[2][1].icon} | ${grid[2][2].icon}`
+  ].join("\n");
 }
 
-// ================= SLOT CHECK =================
+// ================= WIN CHECK =================
 
-function checkWins(grid, bet) {
+function checkWin(grid, bet) {
   const lines = [
     [grid[0][0], grid[0][1], grid[0][2]],
     [grid[1][0], grid[1][1], grid[1][2]],
@@ -124,10 +125,16 @@ function checkWins(grid, bet) {
     }
   }
 
+  // 🎯 JACKPOT BONUS
+  const flat = grid.flat().map(x => x.icon);
+  if (flat.every(x => x === "7️⃣")) {
+    win += bet * 100;
+  }
+
   return win;
 }
 
-// ================= INTERACTION =================
+// ================= INTERACTIONS =================
 
 client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
@@ -144,10 +151,7 @@ client.on("interactionCreate", async interaction => {
   // ================= COINS =================
 
   if (interaction.commandName === "coins") {
-    return interaction.reply({
-      content: `💰 Du hast **${getCoins(id)} Coins**`,
-      ephemeral: true
-    });
+    return interaction.reply(`💰 Coins: ${getCoins(id)}`);
   }
 
   // ================= DAILY =================
@@ -161,10 +165,7 @@ client.on("interactionCreate", async interaction => {
       const h = Math.floor(t / 3600000);
       const m = Math.floor((t % 3600000) / 60000);
 
-      return interaction.reply({
-        content: `⏳ Warte ${h}h ${m}m`,
-        ephemeral: true
-      });
+      return interaction.reply(`⏳ Warte ${h}h ${m}m`);
     }
 
     addCoins(id, 5000);
@@ -179,7 +180,7 @@ client.on("interactionCreate", async interaction => {
     const bet = interaction.options.getInteger("einsatz");
 
     if (bet <= 0)
-      return interaction.reply({ content: "❌ Ungültiger Einsatz", ephemeral: true });
+      return interaction.reply({ content: "❌ Ungültig", ephemeral: true });
 
     if (getCoins(id) < bet)
       return interaction.reply({ content: "❌ Nicht genug Coins", ephemeral: true });
@@ -190,31 +191,36 @@ client.on("interactionCreate", async interaction => {
 
     // ================= ANIMATION =================
 
-    for (let i = 0; i < 4; i++) {
-      const animGrid = makeGrid();
+    let grid;
+
+    for (let i = 0; i < 5; i++) {
+      grid = makeGrid();
+
       await interaction.editReply(
-        `🎰 Dreht...\n\n\`\`\`\n${formatGrid(animGrid)}\n\`\`\``
+`🎰 SLOT DREHT...
+
+${formatGrid(grid)}`
       );
+
       await new Promise(r => setTimeout(r, 500));
     }
 
     // ================= FINAL =================
 
-    const grid = makeGrid();
-    const win = checkWins(grid, bet);
+    grid = makeGrid();
+
+    const win = checkWin(grid, bet);
 
     if (win > 0) addCoins(id, win);
 
     await interaction.editReply(
 `🎰 SLOT RESULT
 
-\`\`\`
 ${formatGrid(grid)}
-\`\`\`
 
 ${win > 0 ? `🎉 Gewinn: ${win}` : `❌ Verloren: ${bet}`}
 
-💰 Konto: ${getCoins(id)} Coins`
+💰 Konto: ${getCoins(id)}`
     );
   }
 });
