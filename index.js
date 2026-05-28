@@ -9,7 +9,6 @@ const {
 // ================= CONFIG =================
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
-
 const ALLOWED_CHANNEL = "1509425466782646342";
 
 // ================= BOT =================
@@ -32,23 +31,11 @@ function addCoins(id, amount) {
 // ================= DAILY =================
 const daily = new Map();
 
-// ================= SLOT SYMBOLS =================
-const symbols = ["🍒", "🍋", "🔔", "⭐", "7️⃣"];
-
-function randomSymbol() {
-  return symbols[Math.floor(Math.random() * symbols.length)];
-}
-
 // ================= COMMANDS =================
 const commands = [
   new SlashCommandBuilder()
     .setName("slot")
-    .setDescription("🎰 Slot Machine")
-    .addIntegerOption(opt =>
-      opt.setName("einsatz")
-        .setDescription("Coins setzen")
-        .setRequired(true)
-    ),
+    .setDescription("🎰 Slot Machine"),
 
   new SlashCommandBuilder()
     .setName("coins")
@@ -59,19 +46,19 @@ const commands = [
     .setDescription("🎁 Daily Coins")
 ].map(c => c.toJSON());
 
-// ================= REGISTER COMMANDS =================
+// ================= REGISTER =================
 const rest = new REST({ version: "10" }).setToken(TOKEN);
 
 (async () => {
   try {
-    console.log("Commands werden geladen...");
+    console.log("Commands laden...");
 
     await rest.put(
       Routes.applicationCommands(CLIENT_ID),
       { body: commands }
     );
 
-    console.log("Commands geladen.");
+    console.log("Commands geladen");
   } catch (err) {
     console.error(err);
   }
@@ -118,56 +105,23 @@ client.on("interactionCreate", async interaction => {
     return interaction.reply(`🎁 +5000 Coins`);
   }
 
-  // ================= SLOT =================
+  // ================= SLOT (FIX 3 ROWS) =================
   if (interaction.commandName === "slot") {
-    const bet = interaction.options.getInteger("einsatz");
+    const symbols = ["🍒", "🍋", "🔔", "⭐", "7️⃣"];
 
-    if (bet <= 0) {
-      return interaction.reply("❌ Ungültiger Einsatz");
-    }
+    const r = () => symbols[Math.floor(Math.random() * symbols.length)];
 
-    if (getCoins(userId) < bet) {
-      return interaction.reply("❌ Nicht genug Coins");
-    }
+    const row1 = `${r()} | ${r()} | ${r()}`;
+    const row2 = `${r()} | ${r()} | ${r()}`;
+    const row3 = `${r()} | ${r()} | ${r()}`;
 
-    addCoins(userId, -bet);
+    return interaction.reply(
+`🎰 SLOT
 
-    const grid = [
-      [randomSymbol(), randomSymbol(), randomSymbol()],
-      [randomSymbol(), randomSymbol(), randomSymbol()],
-      [randomSymbol(), randomSymbol(), randomSymbol()]
-    ];
-
-    const lines = [
-      [grid[0][0], grid[0][1], grid[0][2]],
-      [grid[1][0], grid[1][1], grid[1][2]],
-      [grid[2][0], grid[2][1], grid[2][2]],
-      [grid[0][0], grid[1][1], grid[2][2]],
-      [grid[0][2], grid[1][1], grid[2][0]]
-    ];
-
-    let win = 0;
-
-    for (const line of lines) {
-      if (line[0] === line[1] && line[1] === line[2]) {
-        win += bet * 3;
-      }
-    }
-
-    if (win > 0) addCoins(userId, win);
-
-    const text =
-`🎰 SLOT RESULT
-
-${grid[0][0]} | ${grid[0][1]} | ${grid[0][2]}
-${grid[1][0]} | ${grid[1][1]} | ${grid[1][2]}
-${grid[2][0]} | ${grid[2][1]} | ${grid[2][2]}
-
-${win > 0 ? `🎉 GEWONNEN +${win}` : `❌ VERLOREN -${bet}`}
-
-💰 Coins: ${getCoins(userId)}`;
-
-    return interaction.reply(text);
+${row1}
+${row2}
+${row3}`
+    );
   }
 });
 
