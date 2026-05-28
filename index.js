@@ -98,14 +98,6 @@ Gibt alle 24h:
 
 ━━━━━━━━━━━━━━━━━━
 
-💸 Verlierst du:
-→ Einsatz weg
-
-🏆 Gewinnst du:
-→ Coins automatisch addiert
-
-━━━━━━━━━━━━━━━━━━
-
 🪙 Startcoins:
 10000
 `;
@@ -349,12 +341,10 @@ ${tempGrid.join("\n")}
 
     const lines = [
 
-      // horizontal
       [grid[0][0], grid[0][1], grid[0][2]],
       [grid[1][0], grid[1][1], grid[1][2]],
       [grid[2][0], grid[2][1], grid[2][2]],
 
-      // diagonal
       [grid[0][0], grid[1][1], grid[2][2]],
       [grid[0][2], grid[1][1], grid[2][0]]
     ];
@@ -380,20 +370,27 @@ ${tempGrid.join("\n")}
 
     }
 
-    // ================= EMBED =================
+    // ================= GRID TEXT =================
 
-    const embed = new EmbedBuilder()
-      .setTitle("🎰 SLOT RESULT")
-      .setDescription(
-`# 🎰 SLOT MACHINE
-
-╔══════════════╗
+    const finalGrid =
+`╔══════════════╗
 ║ ${grid[0][0].icon} │ ${grid[0][1].icon} │ ${grid[0][2].icon} ║
 ║──────────────║
 ║ ${grid[1][0].icon} │ ${grid[1][1].icon} │ ${grid[1][2].icon} ║
 ║──────────────║
 ║ ${grid[2][0].icon} │ ${grid[2][1].icon} │ ${grid[2][2].icon} ║
-╚══════════════╝
+╚══════════════╝`;
+
+    // ================= EMBED =================
+
+    const embed = new EmbedBuilder()
+      .setTitle("🎰 SLOT RESULT")
+      .setDescription(
+`🎰 SLOT MACHINE
+
+\`\`\`
+${finalGrid}
+\`\`\`
 
 ━━━━━━━━━━━━━━━━━━
 
