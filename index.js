@@ -59,6 +59,10 @@ function randomSymbol() {
   ];
 }
 
+// ================= DAILY =================
+
+const dailyCooldown = new Map();
+
 // ================= REGELN =================
 
 const rulesText = `
@@ -83,6 +87,14 @@ const rulesText = `
 🔔 = x5
 BAR = x10
 7️⃣ = x25
+
+━━━━━━━━━━━━━━━━━━
+
+🎁 DAILY:
+\`/daily\`
+
+Gibt alle 24h:
+5000 Coins
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -115,6 +127,10 @@ const commands = [
   new SlashCommandBuilder()
     .setName("coins")
     .setDescription("💰 Zeigt deine Coins"),
+
+  new SlashCommandBuilder()
+    .setName("daily")
+    .setDescription("🎁 Tägliche Coins"),
 
   new SlashCommandBuilder()
     .setName("slotregeln")
@@ -197,6 +213,56 @@ client.on("interactionCreate", async interaction => {
     });
   }
 
+  // ================= DAILY =================
+
+  if (interaction.commandName === "daily") {
+
+    const userId = interaction.user.id;
+
+    const now = Date.now();
+
+    const cooldown = 24 * 60 * 60 * 1000;
+
+    if (
+      dailyCooldown.has(userId) &&
+      now - dailyCooldown.get(userId) < cooldown
+    ) {
+
+      const remaining =
+        cooldown - (now - dailyCooldown.get(userId));
+
+      const hours = Math.floor(
+        remaining / (1000 * 60 * 60)
+      );
+
+      const minutes = Math.floor(
+        (remaining % (1000 * 60 * 60))
+        / (1000 * 60)
+      );
+
+      return interaction.reply({
+        content:
+`⏳ Du hast dein Daily schon geholt.
+
+Warte:
+${hours}h ${minutes}m`,
+        ephemeral: true
+      });
+    }
+
+    addCoins(userId, 5000);
+
+    dailyCooldown.set(userId, now);
+
+    return interaction.reply({
+      content:
+`🎁 Du hast 5000 Coins erhalten!
+
+💰 Kontostand:
+${getCoins(userId)} Coins`
+    });
+  }
+
   // ================= SLOT =================
 
   if (interaction.commandName === "slot") {
@@ -216,7 +282,11 @@ client.on("interactionCreate", async interaction => {
     if (getCoins(userId) < bet) {
 
       return interaction.reply({
-        content: "❌ Nicht genug Coins.",
+        content:
+`❌ Nicht genug Coins.
+
+Nutze:
+/daily`,
         ephemeral: true
       });
     }
@@ -352,11 +422,8 @@ ${
 ${getCoins(userId)} Coins`
       )
       .setColor(
-
         winnings > 0
-
           ? "Gold"
-
           : "Red"
       );
 
