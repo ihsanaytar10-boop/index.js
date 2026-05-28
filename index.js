@@ -85,6 +85,7 @@ client.once("ready", () => {
 client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
+  // Nur Casino Channel
   if (interaction.channel.id !== ALLOWED_CHANNEL) {
     return interaction.reply({
       content: "❌ Nur im Casino Channel!",
@@ -127,8 +128,8 @@ client.on("interactionCreate", async interaction => {
   if (interaction.commandName === "slot") {
     try {
       const bet = interaction.options.getInteger("einsatz");
-      const userId = interaction.user.id;
 
+      // Einsatz prüfen
       if (bet <= 0) {
         return interaction.reply({
           content: "❌ Ungültiger Einsatz",
@@ -136,6 +137,7 @@ client.on("interactionCreate", async interaction => {
         });
       }
 
+      // Coins prüfen
       if (getCoins(userId) < bet) {
         return interaction.reply({
           content: "❌ Nicht genug Coins",
@@ -143,25 +145,54 @@ client.on("interactionCreate", async interaction => {
         });
       }
 
+      // Coins abziehen
       addCoins(userId, -bet);
 
-      const r = () =>
-        symbols[Math.floor(Math.random() * symbols.length)];
-
+      // 3x3 Grid
       const grid = [
-        [r(), r(), r()],
-        [r(), r(), r()],
-        [r(), r(), r()]
+        [randomSymbol(), randomSymbol(), randomSymbol()],
+        [randomSymbol(), randomSymbol(), randomSymbol()],
+        [randomSymbol(), randomSymbol(), randomSymbol()]
       ];
 
-      const text =
-`🎰 SLOT RESULT
+      let won = false;
+      let winnings = 0;
 
+      // Gewinnprüfung Reihen
+      for (const row of grid) {
+        if (row[0] === row[1] && row[1] === row[2]) {
+          won = true;
+
+          // Multiplikator
+          if (row[0] === "7️⃣") {
+            winnings += bet * 10;
+          } else if (row[0] === "⭐") {
+            winnings += bet * 5;
+          } else {
+            winnings += bet * 3;
+          }
+        }
+      }
+
+      // Gewinn auszahlen
+      if (won) {
+        addCoins(userId, winnings);
+      }
+
+      // Anzeige
+      const text = `
+🎰 SLOT RESULT
+
+\`\`\`
 ${grid[0][0]} | ${grid[0][1]} | ${grid[0][2]}
 ${grid[1][0]} | ${grid[1][1]} | ${grid[1][2]}
 ${grid[2][0]} | ${grid[2][1]} | ${grid[2][2]}
+\`\`\`
 
-💰 Coins: ${getCoins(userId)}`;
+${won ? `🎉 GEWONNEN: +${winnings} Coins` : "❌ Kein Gewinn"}
+
+💰 Coins: ${getCoins(userId)}
+`;
 
       return interaction.reply({
         content: text
