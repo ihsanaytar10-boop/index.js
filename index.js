@@ -14,7 +14,7 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-// ===== COINS =====
+// ================= COINS =================
 
 const coins = new Map();
 
@@ -28,40 +28,69 @@ function getCoins(userId) {
 }
 
 function addCoins(userId, amount) {
-  coins.set(userId, getCoins(userId) + amount);
+
+  const current = getCoins(userId);
+
+  coins.set(userId, current + amount);
 }
 
-// ===== SYMBOLS =====
+// ================= SYMBOLS =================
 
 const symbols = [
-  { icon: "🍋", multi: 1.5 },
-  { icon: "🍒", multi: 2 },
-  { icon: "🔔", multi: 5 },
-  { icon: "BAR", multi: 10 },
-  { icon: "7️⃣", multi: 25 }
+  {
+    icon: "🍋",
+    multi: 1.5
+  },
+  {
+    icon: "🍒",
+    multi: 2
+  },
+  {
+    icon: "🔔",
+    multi: 5
+  },
+  {
+    icon: "BAR",
+    multi: 10
+  },
+  {
+    icon: "7️⃣",
+    multi: 25
+  }
 ];
 
 function randomSymbol() {
-  return symbols[Math.floor(Math.random() * symbols.length)];
+
+  return symbols[
+    Math.floor(Math.random() * symbols.length)
+  ];
 }
 
-// ===== SLASH COMMAND =====
+// ================= COMMANDS =================
 
 const commands = [
+
   new SlashCommandBuilder()
     .setName("slot")
-    .setDescription("🎰 Spiel Slot")
+    .setDescription("🎰 Slot spielen")
     .addIntegerOption(option =>
       option
         .setName("einsatz")
         .setDescription("Coins setzen")
         .setRequired(true)
-    )
+    ),
+
+  new SlashCommandBuilder()
+    .setName("coins")
+    .setDescription("💰 Zeigt deine Coins")
+
 ].map(command => command.toJSON());
 
-// ===== REGISTER =====
+// ================= REGISTER =================
 
-const rest = new REST({ version: "10" }).setToken(TOKEN);
+const rest = new REST({
+  version: "10"
+}).setToken(TOKEN);
 
 (async () => {
 
@@ -77,113 +106,135 @@ const rest = new REST({ version: "10" }).setToken(TOKEN);
     console.log("Commands geladen.");
 
   } catch (err) {
+
     console.error(err);
+
   }
 
 })();
 
-// ===== READY =====
+// ================= READY =================
 
 client.once("ready", () => {
+
   console.log(`${client.user.tag} online`);
+
 });
 
-// ===== SLOT =====
+// ================= INTERACTIONS =================
 
 client.on("interactionCreate", async interaction => {
 
   if (!interaction.isChatInputCommand()) return;
 
-  if (interaction.commandName !== "slot") return;
+  // ===== COINS =====
 
-  const bet = interaction.options.getInteger("einsatz");
-
-  const userId = interaction.user.id;
-
-  if (bet <= 0) {
+  if (interaction.commandName === "coins") {
 
     return interaction.reply({
-      content: "❌ Ungültiger Einsatz.",
+      content: `💰 Du hast ${getCoins(interaction.user.id)} Coins.`,
       ephemeral: true
     });
   }
 
-  if (getCoins(userId) < bet) {
+  // ===== SLOT =====
 
-    return interaction.reply({
-      content: "❌ Nicht genug Coins.",
-      ephemeral: true
+  if (interaction.commandName === "slot") {
+
+    const bet = interaction.options.getInteger("einsatz");
+
+    const userId = interaction.user.id;
+
+    // CHECKS
+    if (bet <= 0) {
+
+      return interaction.reply({
+        content: "❌ Ungültiger Einsatz.",
+        ephemeral: true
+      });
+    }
+
+    if (getCoins(userId) < bet) {
+
+      return interaction.reply({
+        content: "❌ Nicht genug Coins.",
+        ephemeral: true
+      });
+    }
+
+    // BET ABZIEHEN
+    addCoins(userId, -bet);
+
+    await interaction.reply("🎰 Dreht...");
+
+    // ANIMATION
+    for (let i = 0; i < 5; i++) {
+
+      const a = randomSymbol().icon;
+      const b = randomSymbol().icon;
+      const c = randomSymbol().icon;
+
+      await new Promise(resolve =>
+        setTimeout(resolve, 700)
+      );
+
+      await interaction.editReply(
+        `🎰 | ${a} | ${b} | ${c} |`
+      );
+    }
+
+    // FINAL
+    const s1 = randomSymbol();
+    const s2 = randomSymbol();
+    const s3 = randomSymbol();
+
+    let winnings = 0;
+
+    if (
+      s1.icon === s2.icon &&
+      s2.icon === s3.icon
+    ) {
+
+      winnings = Math.floor(
+        bet * s1.multi
+      );
+
+      addCoins(userId, winnings);
+    }
+
+    // EMBED
+    const embed = new EmbedBuilder()
+      .setTitle("🎰 SLOT RESULT")
+      .setDescription(
+        `| ${s1.icon} | ${s2.icon} | ${s3.icon} |`
+      )
+      .addFields(
+        {
+          name: "💰 Ergebnis",
+          value:
+            winnings > 0
+              ? `Gewonnen: ${winnings} Coins`
+              : `Verloren: ${bet} Coins`
+        },
+        {
+          name: "🪙 Kontostand",
+          value: `${getCoins(userId)} Coins`
+        }
+      )
+      .setColor(
+        winnings > 0
+          ? "Gold"
+          : "Red"
+      );
+
+    await interaction.editReply({
+      content: "",
+      embeds: [embed]
     });
   }
-
-  addCoins(userId, -bet);
-
-  await interaction.reply("🎰 Dreht...");
-
-  // Animation
-  for (let i = 0; i < 4; i++) {
-
-    const a = randomSymbol().icon;
-    const b = randomSymbol().icon;
-    const c = randomSymbol().icon;
-
-    await new Promise(r => setTimeout(r, 700));
-
-    await interaction.editReply(
-      `🎰 | ${a} | ${b} | ${c} |`
-    );
-  }
-
-  // Final
-  const s1 = randomSymbol();
-  const s2 = randomSymbol();
-  const s3 = randomSymbol();
-
-  let winnings = 0;
-
-  if (
-    s1.icon === s2.icon &&
-    s2.icon === s3.icon
-  ) {
-
-    winnings = Math.floor(
-      bet * s1.multi
-    );
-
-    addCoins(userId, winnings);
-  }
-
-  const embed = new EmbedBuilder()
-    .setTitle("🎰 SLOT RESULT")
-    .setDescription(
-      `| ${s1.icon} | ${s2.icon} | ${s3.icon} |`
-    )
-    .addFields(
-      {
-        name: "💰 Ergebnis",
-        value:
-          winnings > 0
-            ? `Gewonnen: ${winnings}`
-            : `Verloren: ${bet}`
-      },
-      {
-        name: "🪙 Coins",
-        value: `${getCoins(userId)}`
-      }
-    )
-    .setColor(
-      winnings > 0
-        ? "Gold"
-        : "Red"
-    );
-
-  await interaction.editReply({
-    content: "",
-    embeds: [embed]
-  });
 
 });
 
-// ===== LOGIN =====
+// ================= LOGIN =================
 
 client.login(TOKEN);
