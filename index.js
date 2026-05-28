@@ -67,26 +67,14 @@ const rulesText = `
 💰 Spielen:
 \`/slot einsatz:100\`
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
 🎯 Gewinn bei:
 
 ➡️ 3 gleiche horizontal
 ➡️ 3 gleiche diagonal
 
-Beispiele:
-
-🍒 🍒 🍒
-🍋 🔔 BAR
-7️⃣ 🍋 🍒
-
-ODER
-
-🍒 🔔 7️⃣
-🍋 🍒 BAR
-7️⃣ 🔔 🍒
-
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
 💎 Multiplikatoren:
 
@@ -96,7 +84,7 @@ ODER
 BAR = x10
 7️⃣ = x25
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
 💸 Verlierst du:
 → Einsatz weg
@@ -104,7 +92,7 @@ BAR = x10
 🏆 Gewinnst du:
 → Coins automatisch addiert
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
 🪙 Startcoins:
 10000
@@ -130,7 +118,7 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName("slotregeln")
-    .setDescription("📜 Zeigt die Slot Regeln")
+    .setDescription("📜 Zeigt die Regeln")
 
 ].map(c => c.toJSON());
 
@@ -250,7 +238,7 @@ client.on("interactionCreate", async interaction => {
 
         for (let col = 0; col < 3; col++) {
 
-          rowText += randomSymbol().icon + " ";
+          rowText += randomSymbol().icon + "   ";
 
         }
 
@@ -264,11 +252,17 @@ client.on("interactionCreate", async interaction => {
       await interaction.editReply({
 
         content:
-`🎰 **SLOT MACHINE** 🎰
+`# 🎰 SLOT MACHINE
 
-${tempGrid[0]}
-${tempGrid[1]}
-${tempGrid[2]}`
+\`\`\`
+╔════════════════════╗
+║ ${tempGrid[0]}║
+║────────────────────║
+║ ${tempGrid[1]}║
+║────────────────────║
+║ ${tempGrid[2]}║
+╚════════════════════╝
+\`\`\``
 
       });
     }
@@ -324,21 +318,29 @@ ${tempGrid[2]}`
 
     }
 
-    // ================= FINAL GRID TEXT =================
+    // ================= FINAL GRID =================
 
     const finalGrid =
-`${grid[0][0].icon} ${grid[0][1].icon} ${grid[0][2].icon}
-${grid[1][0].icon} ${grid[1][1].icon} ${grid[1][2].icon}
-${grid[2][0].icon} ${grid[2][1].icon} ${grid[2][2].icon}`;
+`╔════════════════════╗
+║ ${grid[0][0].icon} │ ${grid[0][1].icon} │ ${grid[0][2].icon} ║
+║────────────────────║
+║ ${grid[1][0].icon} │ ${grid[1][1].icon} │ ${grid[1][2].icon} ║
+║────────────────────║
+║ ${grid[2][0].icon} │ ${grid[2][1].icon} │ ${grid[2][2].icon} ║
+╚════════════════════╝`;
 
     // ================= EMBED =================
 
     const embed = new EmbedBuilder()
       .setTitle("🎰 SLOT RESULT")
       .setDescription(
-`${finalGrid}
+`# 🎰 SLOT MACHINE
 
-━━━━━━━━━━━━━━
+\`\`\`
+${finalGrid}
+\`\`\`
+
+━━━━━━━━━━━━━━━━━━
 
 ${
   winnings > 0
