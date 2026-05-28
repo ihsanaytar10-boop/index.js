@@ -3,13 +3,15 @@ const {
   GatewayIntentBits,
   SlashCommandBuilder,
   REST,
-  Routes
+  Routes,
+  EmbedBuilder
 } = require("discord.js");
 
 // ================= CONFIG =================
 
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
+
 const ALLOWED_CHANNEL = "1509425466782646342";
 
 // ================= BOT =================
@@ -23,6 +25,21 @@ const client = new Client({
 const coins = new Map();
 const daily = new Map();
 
+// ================= COINS =================
+
+function getCoins(id) {
+  if (!coins.has(id)) coins.set(id, 10000);
+  return coins.get(id);
+}
+
+function setCoins(id, val) {
+  coins.set(id, val);
+}
+
+function addCoins(id, amt) {
+  setCoins(id, getCoins(id) + amt);
+}
+
 // ================= SYMBOLS =================
 
 const symbols = [
@@ -33,23 +50,8 @@ const symbols = [
   { icon: "7️⃣", multi: 25 }
 ];
 
-const randomSymbol = () =>
+const rand = () =>
   symbols[Math.floor(Math.random() * symbols.length)];
-
-// ================= COINS =================
-
-function getCoins(id) {
-  if (!coins.has(id)) coins.set(id, 10000);
-  return coins.get(id);
-}
-
-function setCoins(id, value) {
-  coins.set(id, value);
-}
-
-function addCoins(id, amount) {
-  setCoins(id, getCoins(id) + amount);
-}
 
 // ================= COMMANDS =================
 
@@ -69,7 +71,7 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName("daily")
-    .setDescription("🎁 Daily Coins")
+    .setDescription("🎁 Daily holen")
 ].map(c => c.toJSON());
 
 // ================= REGISTER =================
@@ -94,11 +96,11 @@ client.once("ready", () => {
 
 function makeGrid() {
   return Array.from({ length: 3 }, () =>
-    Array.from({ length: 3 }, () => randomSymbol())
+    Array.from({ length: 3 }, () => rand())
   );
 }
 
-function formatGrid(grid) {
+function format(grid) {
   return [
     `${grid[0][0].icon} | ${grid[0][1].icon} | ${grid[0][2].icon}`,
     `${grid[1][0].icon} | ${grid[1][1].icon} | ${grid[1][2].icon}`,
@@ -125,7 +127,7 @@ function checkWin(grid, bet) {
     }
   }
 
-  // 🎯 JACKPOT BONUS
+  // 💎 JACKPOT
   const flat = grid.flat().map(x => x.icon);
   if (flat.every(x => x === "7️⃣")) {
     win += bet * 100;
@@ -134,7 +136,7 @@ function checkWin(grid, bet) {
   return win;
 }
 
-// ================= INTERACTIONS =================
+// ================= INTERACTION =================
 
 client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
@@ -189,39 +191,38 @@ client.on("interactionCreate", async interaction => {
 
     await interaction.reply("🎰 Dreht...");
 
-    // ================= ANIMATION =================
-
     let grid;
 
+    // 🎰 Animation
     for (let i = 0; i < 5; i++) {
       grid = makeGrid();
 
-      await interaction.editReply(
-`🎰 SLOT DREHT...
+      const animEmbed = new EmbedBuilder()
+        .setColor("Yellow")
+        .setTitle("🎰 SLOT DREHT...")
+        .setDescription("```\n" + format(grid) + "\n```");
 
-${formatGrid(grid)}`
-      );
+      await interaction.editReply({ embeds: [animEmbed] });
 
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 400));
     }
 
-    // ================= FINAL =================
-
+    // 🎰 FINAL
     grid = makeGrid();
 
     const win = checkWin(grid, bet);
-
     if (win > 0) addCoins(id, win);
 
-    await interaction.editReply(
-`🎰 SLOT RESULT
+    const finalEmbed = new EmbedBuilder()
+      .setColor(win > 0 ? "Green" : "Red")
+      .setTitle("🎰 SLOT RESULT")
+      .setDescription(
+        "```\n" + format(grid) + "\n```" +
+        `\n\n${win > 0 ? `🎉 Gewinn: ${win}` : `❌ Verloren: ${bet}`}` +
+        `\n💰 Konto: ${getCoins(id)}`
+      );
 
-${formatGrid(grid)}
-
-${win > 0 ? `🎉 Gewinn: ${win}` : `❌ Verloren: ${bet}`}
-
-💰 Konto: ${getCoins(id)}`
-    );
+    await interaction.editReply({ embeds: [finalEmbed] });
   }
 });
 
