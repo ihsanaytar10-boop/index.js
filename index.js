@@ -3,8 +3,7 @@ const {
   GatewayIntentBits,
   SlashCommandBuilder,
   REST,
-  Routes,
-  EmbedBuilder
+  Routes
 } = require("discord.js");
 
 // ================= CONFIG =================
@@ -63,45 +62,6 @@ function randomSymbol() {
 
 const dailyCooldown = new Map();
 
-// ================= REGELN =================
-
-const rulesText = `
-🎰 **SLOT REGELN**
-
-💰 Spielen:
-\`/slot einsatz:100\`
-
-━━━━━━━━━━━━━━━━━━
-
-🎯 Gewinn bei:
-
-➡️ 3 gleiche horizontal
-➡️ 3 gleiche diagonal
-
-━━━━━━━━━━━━━━━━━━
-
-💎 Multiplikatoren:
-
-🍋 = x2
-🍒 = x3
-🔔 = x5
-BAR = x10
-7️⃣ = x25
-
-━━━━━━━━━━━━━━━━━━
-
-🎁 DAILY:
-\`/daily\`
-
-Gibt alle 24h:
-5000 Coins
-
-━━━━━━━━━━━━━━━━━━
-
-🪙 Startcoins:
-10000
-`;
-
 // ================= COMMANDS =================
 
 const commands = [
@@ -122,11 +82,7 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName("daily")
-    .setDescription("🎁 Tägliche Coins"),
-
-  new SlashCommandBuilder()
-    .setName("slotregeln")
-    .setDescription("📜 Zeigt die Regeln")
+    .setDescription("🎁 Tägliche Coins")
 
 ].map(c => c.toJSON());
 
@@ -178,20 +134,6 @@ client.on("interactionCreate", async interaction => {
     return interaction.reply({
       content: "❌ Der Bot funktioniert nur im Casino-Channel.",
       ephemeral: true
-    });
-  }
-
-  // ================= REGELN =================
-
-  if (interaction.commandName === "slotregeln") {
-
-    const embed = new EmbedBuilder()
-      .setTitle("📜 SLOT REGELN")
-      .setDescription(rulesText)
-      .setColor("Gold");
-
-    return interaction.reply({
-      embeds: [embed]
     });
   }
 
@@ -292,28 +234,17 @@ Nutze:
 
     for (let i = 0; i < 5; i++) {
 
-      const tempGrid = [];
-
-      for (let row = 0; row < 3; row++) {
-
-        let rowText = "";
-
-        for (let col = 0; col < 3; col++) {
-
-          rowText += randomSymbol().icon + " ";
-
-        }
-
-        tempGrid.push(rowText);
-
-      }
+      const tempGrid =
+`${randomSymbol().icon} │ ${randomSymbol().icon} │ ${randomSymbol().icon}
+${randomSymbol().icon} │ ${randomSymbol().icon} │ ${randomSymbol().icon}
+${randomSymbol().icon} │ ${randomSymbol().icon} │ ${randomSymbol().icon}`;
 
       await interaction.editReply({
         content:
 `🎰 Dreht...
 
 \`\`\`
-${tempGrid.join("\n")}
+${tempGrid}
 \`\`\``
       });
 
@@ -370,29 +301,23 @@ ${tempGrid.join("\n")}
 
     }
 
-    // ================= GRID TEXT =================
+    // ================= FINAL TEXT =================
 
     const finalGrid =
-`╔══════════════╗
-║ ${grid[0][0].icon} │ ${grid[0][1].icon} │ ${grid[0][2].icon} ║
-║──────────────║
-║ ${grid[1][0].icon} │ ${grid[1][1].icon} │ ${grid[1][2].icon} ║
-║──────────────║
-║ ${grid[2][0].icon} │ ${grid[2][1].icon} │ ${grid[2][2].icon} ║
-╚══════════════╝`;
+`${grid[0][0].icon} │ ${grid[0][1].icon} │ ${grid[0][2].icon}
+${grid[1][0].icon} │ ${grid[1][1].icon} │ ${grid[1][2].icon}
+${grid[2][0].icon} │ ${grid[2][1].icon} │ ${grid[2][2].icon}`;
 
-    // ================= EMBED =================
+    // ================= SEND =================
 
-    const embed = new EmbedBuilder()
-      .setTitle("🎰 SLOT RESULT")
-      .setDescription(
-`🎰 SLOT MACHINE
+    await interaction.editReply({
+
+      content:
+`🎰 SLOT RESULT
 
 \`\`\`
 ${finalGrid}
 \`\`\`
-
-━━━━━━━━━━━━━━━━━━
 
 ${
   winnings > 0
@@ -400,22 +325,7 @@ ${
     : `❌ Verloren: ${bet} Coins`
 }
 
-🪙 Kontostand:
-${getCoins(userId)} Coins`
-      )
-      .setColor(
-        winnings > 0
-          ? "Gold"
-          : "Red"
-      );
-
-    // ================= SEND =================
-
-    await interaction.editReply({
-
-      content: "",
-
-      embeds: [embed]
+🪙 Kontostand: ${getCoins(userId)} Coins`
 
     });
   }
