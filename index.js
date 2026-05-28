@@ -315,27 +315,14 @@ Nutze:
         tempGrid.push(rowText);
       }
 
-      await new Promise(resolve =>
-        setTimeout(resolve, 700)
-      );
-
-      await interaction.editReply({
-
-        content:
-`# 🎰 SLOT MACHINE
+     await interaction.editReply({
+  content:
+`🎰 SLOT RESULT
 
 \`\`\`
-╔════════════════════╗
-║ ${tempGrid[0]}║
-║────────────────────║
-║ ${tempGrid[1]}║
-║────────────────────║
-║ ${tempGrid[2]}║
-╚════════════════════╝
+${finalGrid}
 \`\`\``
-
-      });
-    }
+});
 
     // ================= FINAL GRID =================
 
