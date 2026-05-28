@@ -12,10 +12,12 @@ const Canvas = require("canvas");
 const GIFEncoder = require("gifencoder");
 const fs = require("fs");
 
-// ================= BOT =================
+// ================= CONFIG =================
 
-const TOKEN = "BOT_TOKEN";
-const CLIENT_ID = "CLIENT_ID";
+const TOKEN = process.env.TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
+
+// ================= BOT =================
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
@@ -70,7 +72,7 @@ function randomSymbol() {
   ];
 }
 
-// ================= SLASH COMMAND =================
+// ================= COMMAND =================
 
 const commands = [
 
@@ -80,13 +82,13 @@ const commands = [
     .addIntegerOption(option =>
       option
         .setName("einsatz")
-        .setDescription("Coins setzen")
+        .setDescription("Wie viele Coins?")
         .setRequired(true)
     )
 
 ].map(command => command.toJSON());
 
-// ================= COMMAND DEPLOY =================
+// ================= DEPLOY =================
 
 const rest = new REST({
   version: "10"
@@ -117,7 +119,7 @@ client.once("ready", () => {
   console.log(`${client.user.tag} online`);
 });
 
-// ================= INTERACTION =================
+// ================= SLOT COMMAND =================
 
 client.on("interactionCreate", async interaction => {
 
@@ -151,7 +153,7 @@ client.on("interactionCreate", async interaction => {
 
   await interaction.deferReply();
 
-  // FINAL SYMBOLS
+  // END SYMBOLS
   const final1 = randomSymbol();
   const final2 = randomSymbol();
   const final3 = randomSymbol();
@@ -181,6 +183,7 @@ client.on("interactionCreate", async interaction => {
   // ANIMATION
   for (let i = 0; i < 30; i++) {
 
+    // BACKGROUND
     ctx.fillStyle = "#111";
     ctx.fillRect(0, 0, width, height);
 
@@ -197,7 +200,7 @@ client.on("interactionCreate", async interaction => {
     ctx.fillRect(155, 90, 90, 90);
     ctx.fillRect(270, 90, 90, 90);
 
-    // SPINNING
+    // SPIN EFFECT
     const s1 =
       i > 22
         ? final1.symbol
@@ -241,7 +244,7 @@ client.on("interactionCreate", async interaction => {
     addCoins(userId, winnings);
   }
 
-  // EMBED
+  // RESULT EMBED
   const embed = new EmbedBuilder()
     .setTitle("🎰 SLOT RESULT")
     .setColor(
@@ -259,7 +262,7 @@ client.on("interactionCreate", async interaction => {
       value: `${getCoins(userId)} Coins`
     });
 
-  // SEND
+  // SEND GIF
   const attachment = new AttachmentBuilder(path);
 
   await interaction.editReply({
