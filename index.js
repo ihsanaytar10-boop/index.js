@@ -31,11 +31,23 @@ function addCoins(id, amount) {
 // ================= DAILY =================
 const daily = new Map();
 
+// ================= SYMBOLS =================
+const symbols = ["🍒", "🍋", "🔔", "⭐", "7️⃣"];
+
+function randomSymbol() {
+  return symbols[Math.floor(Math.random() * symbols.length)];
+}
+
 // ================= COMMANDS =================
 const commands = [
   new SlashCommandBuilder()
     .setName("slot")
-    .setDescription("🎰 Slot Machine"),
+    .setDescription("🎰 Slot Machine")
+    .addIntegerOption(opt =>
+      opt.setName("einsatz")
+        .setDescription("Coins setzen")
+        .setRequired(true)
+    ),
 
   new SlashCommandBuilder()
     .setName("coins")
@@ -58,7 +70,7 @@ const rest = new REST({ version: "10" }).setToken(TOKEN);
       { body: commands }
     );
 
-    console.log("Commands geladen");
+    console.log("Commands geladen.");
   } catch (err) {
     console.error(err);
   }
@@ -76,7 +88,7 @@ client.on("interactionCreate", async interaction => {
   if (interaction.channel.id !== ALLOWED_CHANNEL) {
     return interaction.reply({
       content: "❌ Nur im Casino Channel!",
-      ephemeral: true
+      flags: 64
     });
   }
 
@@ -84,7 +96,10 @@ client.on("interactionCreate", async interaction => {
 
   // ================= COINS =================
   if (interaction.commandName === "coins") {
-    return interaction.reply(`💰 Coins: ${getCoins(userId)}`);
+    return interaction.reply({
+      content: `💰 Coins: ${getCoins(userId)}`,
+      flags: 64
+    });
   }
 
   // ================= DAILY =================
@@ -95,33 +110,73 @@ client.on("interactionCreate", async interaction => {
     if (daily.has(userId) && now - daily.get(userId) < cooldown) {
       return interaction.reply({
         content: "⏳ Daily schon benutzt!",
-        ephemeral: true
+        flags: 64
       });
     }
 
     addCoins(userId, 5000);
     daily.set(userId, now);
 
-    return interaction.reply(`🎁 +5000 Coins`);
+    return interaction.reply({
+      content: "🎁 +5000 Coins erhalten!",
+      flags: 64
+    });
   }
 
-  // ================= SLOT (FIX 3 ROWS) =================
+  // ================= SLOT =================
   if (interaction.commandName === "slot") {
-    const symbols = ["🍒", "🍋", "🔔", "⭐", "7️⃣"];
+    try {
+      const bet = interaction.options.getInteger("einsatz");
+      const userId = interaction.user.id;
 
-    const r = () => symbols[Math.floor(Math.random() * symbols.length)];
+      if (bet <= 0) {
+        return interaction.reply({
+          content: "❌ Ungültiger Einsatz",
+          flags: 64
+        });
+      }
 
-    const row1 = `${r()} | ${r()} | ${r()}`;
-    const row2 = `${r()} | ${r()} | ${r()}`;
-    const row3 = `${r()} | ${r()} | ${r()}`;
+      if (getCoins(userId) < bet) {
+        return interaction.reply({
+          content: "❌ Nicht genug Coins",
+          flags: 64
+        });
+      }
 
-    return interaction.reply(
-`🎰 SLOT
+      addCoins(userId, -bet);
 
-${row1}
-${row2}
-${row3}`
-    );
+      const r = () =>
+        symbols[Math.floor(Math.random() * symbols.length)];
+
+      const grid = [
+        [r(), r(), r()],
+        [r(), r(), r()],
+        [r(), r(), r()]
+      ];
+
+      const text =
+`🎰 SLOT RESULT
+
+${grid[0][0]} | ${grid[0][1]} | ${grid[0][2]}
+${grid[1][0]} | ${grid[1][1]} | ${grid[1][2]}
+${grid[2][0]} | ${grid[2][1]} | ${grid[2][2]}
+
+💰 Coins: ${getCoins(userId)}`;
+
+      return interaction.reply({
+        content: text
+      });
+
+    } catch (err) {
+      console.error(err);
+
+      if (!interaction.replied) {
+        return interaction.reply({
+          content: "❌ Fehler im Slot System",
+          flags: 64
+        });
+      }
+    }
   }
 });
 
