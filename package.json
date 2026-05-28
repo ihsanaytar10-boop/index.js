@@ -7,7 +7,6 @@
   },
   "dependencies": {
     "discord.js": "^14.15.3",
-    "canvas": "^2.11.2",
     "gifencoder": "^2.0.1"
   }
 }
