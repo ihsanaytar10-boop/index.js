@@ -13,7 +13,7 @@ const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 
 // NUR DIESER CHANNEL
-const ALLOWED_CHANNEL = "DEINE_CHANNEL_ID";
+const ALLOWED_CHANNEL = "1509425466782646342";
 
 // ================= BOT =================
 
