@@ -1,4 +1,5 @@
 const { Client, GatewayIntentBits } = require('discord.js');
+const fs = require('fs');
 
 const client = new Client({
   intents: [
@@ -8,15 +9,22 @@ const client = new Client({
   ]
 });
 
-const fruits = ['🍒', '🍋', '🍉', '🍇', '🍓', '🍍', '7️⃣'];
-
 /*
 ━━━━━━━━━━━━━━━━━━━━
-💰 COINS SYSTEM (FIXED)
+💾 COINS SPEICHER (FIX)
 ━━━━━━━━━━━━━━━━━━━━
 */
 
-const coins = {};
+let coins = {};
+
+// load coins file
+if (fs.existsSync('./coins.json')) {
+  coins = JSON.parse(fs.readFileSync('./coins.json'));
+}
+
+function saveCoins() {
+  fs.writeFileSync('./coins.json', JSON.stringify(coins, null, 2));
+}
 
 function getCoins(id) {
   if (!coins[id]) coins[id] = 1000;
@@ -26,16 +34,18 @@ function getCoins(id) {
 function addCoins(id, amount) {
   if (!coins[id]) coins[id] = 1000;
   coins[id] += amount;
+  saveCoins();
 }
 
 function removeCoins(id, amount) {
   if (!coins[id]) coins[id] = 1000;
   coins[id] -= amount;
+  saveCoins();
 }
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-🎁 DAILY COOLDOWN
+🎁 DAILY SYSTEM
 ━━━━━━━━━━━━━━━━━━━━
 */
 
@@ -43,9 +53,11 @@ const dailyCooldown = {};
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-🎲 RANDOM
+🎰 SLOT SETTINGS
 ━━━━━━━━━━━━━━━━━━━━
 */
+
+const fruits = ['🍒', '🍋', '🍉', '🍇', '🍓', '🍍', '7️⃣'];
 
 function rand() {
   return fruits[Math.floor(Math.random() * fruits.length)];
@@ -58,7 +70,7 @@ function rand() {
 */
 
 client.once('ready', () => {
-  console.log(`Online als ${client.user.tag}`);
+  console.log(`✅ Online als ${client.user.tag}`);
 });
 
 /*
@@ -83,7 +95,7 @@ client.on('messageCreate', async (message) => {
     const now = Date.now();
 
     if (dailyCooldown[id] && now - dailyCooldown[id] < 24 * 60 * 60 * 1000) {
-      return message.reply('⏳ Daily schon abgeholt!');
+      return message.reply('⏳ Du hast dein Daily schon geholt!');
     }
 
     dailyCooldown[id] = now;
@@ -127,50 +139,30 @@ ${grid[2].join(' | ')}`
 
     /*
     ━━━━━━━━━━━━━━━━━━━━━
-    🧠 WIN LOGIC
+    🏆 WIN LINES
     ━━━━━━━━━━━━━━━━━━━━━
     */
 
     let win = 0;
     let result = "😢 Verloren";
 
-    const rows = grid;
-    const flat = grid.flat();
+    const lines = [
+      [grid[0][0], grid[0][1], grid[0][2]],
+      [grid[1][0], grid[1][1], grid[1][2]],
+      [grid[2][0], grid[2][1], grid[2][2]],
+      [grid[0][0], grid[1][1], grid[2][2]],
+      [grid[0][2], grid[1][1], grid[2][0]]
+    ];
 
-    const row1 = rows[0];
-    const row2 = rows[1];
-    const row3 = rows[2];
-
-    // 🥇 3 gleiche in einer Zeile (GEWINNLINIE)
-    if (row1[0] === row1[1] && row1[1] === row1[2]) {
-      win += bet * 5;
-      result = "🔥 Gewinnlinie 1 (Top Row)";
+    for (let line of lines) {
+      if (line[0] === line[1] && line[1] === line[2]) {
+        win += bet * 5;
+        result = "🔥 Gewinnlinie getroffen!";
+      }
     }
 
-    if (row2[0] === row2[1] && row2[1] === row2[2]) {
-      win += bet * 5;
-      result = "🔥 Gewinnlinie 2 (Middle Row)";
-    }
-
-    if (row3[0] === row3[1] && row3[1] === row3[2]) {
-      win += bet * 5;
-      result = "🔥 Gewinnlinie 3 (Bottom Row)";
-    }
-
-    // 💎 Diagonale 1
-    if (rows[0][0] === rows[1][1] && rows[1][1] === rows[2][2]) {
-      win += bet * 8;
-      result = "💎 Diagonale Gewinn!";
-    }
-
-    // 💎 Diagonale 2
-    if (rows[0][2] === rows[1][1] && rows[1][1] === rows[2][0]) {
-      win += bet * 8;
-      result = "💎 Diagonale Gewinn!";
-    }
-
-    // 🔥 Lucky 7 Bonus
-    if (flat.includes('7️⃣')) {
+    // Lucky 7 bonus
+    if (grid.flat().includes('7️⃣')) {
       win += bet * 2;
     }
 
@@ -179,9 +171,9 @@ ${grid[2].join(' | ')}`
     msg.edit(
 `🎰 SLOT MACHINE 🎰
 
-${rows[0].join(' | ')}
-${rows[1].join(' | ')}
-${rows[2].join(' | ')}
+${grid[0].join(' | ')}
+${grid[1].join(' | ')}
+${grid[2].join(' | ')}
 
 ${result}
 💰 Gewinn: +${win}
@@ -189,5 +181,11 @@ ${result}
     );
   }
 });
+
+/*
+━━━━━━━━━━━━━━━━━━━━
+🔑 LOGIN
+━━━━━━━━━━━━━━━━━━━━
+*/
 
 client.login(process.env.TOKEN);
