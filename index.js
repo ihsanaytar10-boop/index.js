@@ -11,7 +11,7 @@ const client = new Client({
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-💾 COINS SYSTEM
+💾 SAVE SYSTEM
 ━━━━━━━━━━━━━━━━━━━━
 */
 
@@ -21,25 +21,25 @@ if (fs.existsSync('./coins.json')) {
   coins = JSON.parse(fs.readFileSync('./coins.json'));
 }
 
-function save() {
+function saveCoins() {
   fs.writeFileSync('./coins.json', JSON.stringify(coins, null, 2));
 }
 
-function get(id) {
+function getCoins(id) {
   if (!coins[id]) coins[id] = 1000;
   return coins[id];
 }
 
-function add(id, a) {
+function addCoins(id, amount) {
   if (!coins[id]) coins[id] = 1000;
-  coins[id] += a;
-  save();
+  coins[id] += amount;
+  saveCoins();
 }
 
-function remove(id, a) {
+function removeCoins(id, amount) {
   if (!coins[id]) coins[id] = 1000;
-  coins[id] -= a;
-  save();
+  coins[id] -= amount;
+  saveCoins();
 }
 
 /*
@@ -69,7 +69,7 @@ function rand() {
 */
 
 client.once('ready', () => {
-  console.log(`✅ Online als ${client.user.tag}`);
+  console.log(`✅ Bot online als ${client.user.tag}`);
 });
 
 /*
@@ -83,9 +83,9 @@ client.on('messageCreate', async (message) => {
 
   const id = message.author.id;
 
-  // 💰 COINS
+  // 💰 BALANCE
   if (message.content === '!coins') {
-    return message.reply(`💰 ${get(id)} Coins`);
+    return message.reply(`💰 Du hast **${getCoins(id)} Coins**`);
   }
 
   // 🎁 DAILY
@@ -93,14 +93,14 @@ client.on('messageCreate', async (message) => {
 
     const now = Date.now();
 
-    if (daily[id] && now - daily[id] < 86400000) {
-      return message.reply('⏳ Schon geholt!');
+    if (daily[id] && now - daily[id] < 24 * 60 * 60 * 1000) {
+      return message.reply('⏳ Daily schon abgeholt!');
     }
 
     daily[id] = now;
-    add(id, 5000);
+    addCoins(id, 5000);
 
-    return message.reply('🎁 +5000 Coins');
+    return message.reply('🎁 +5000 Coins erhalten!');
   }
 
   // 🎰 SLOT
@@ -109,29 +109,13 @@ client.on('messageCreate', async (message) => {
     let bet = parseInt(message.content.split(' ')[1]);
 
     if (!bet) return message.reply('❌ !slot <einsatz>');
-    if (get(id) < bet) return message.reply('❌ Zu wenig Coins');
+    if (getCoins(id) < bet) return message.reply('❌ Nicht genug Coins');
 
-    remove(id, bet);
+    removeCoins(id, bet);
 
     let msg = await message.reply('🎰 Spinning...');
 
     let grid;
-    let winLine = null;
-
-    // 🎯 35% Win Chance
-    let willWin = Math.random() < 0.35;
-
-    const lines = [
-      [[0,0],[0,1],[0,2]],
-      [[1,0],[1,1],[1,2]],
-      [[2,0],[2,1],[2,2]],
-      [[0,0],[1,1],[2,2]],
-      [[0,2],[1,1],[2,0]]
-    ];
-
-    if (willWin) {
-      winLine = lines[Math.floor(Math.random() * lines.length)];
-    }
 
     // 🎰 ANIMATION
     for (let i = 0; i < 8; i++) {
@@ -153,28 +137,49 @@ ${grid[2].join(' | ')}`
       await new Promise(r => setTimeout(r, 200));
     }
 
-    // 🏆 WIN FORCE LINE
+    /*
+    ━━━━━━━━━━━━━━━━━━━━━
+    🏆 WIN LOGIC + VISUAL LINE
+    ━━━━━━━━━━━━━━━━━━━━━
+    */
+
     let win = 0;
     let result = "😢 Verloren";
+    let winCells = [];
 
-    if (winLine) {
+    const lines = [
+      [[0,0],[0,1],[0,2]],
+      [[1,0],[1,1],[1,2]],
+      [[2,0],[2,1],[2,2]],
+      [[0,0],[1,1],[2,2]],
+      [[0,2],[1,1],[2,0]]
+    ];
 
-      let symbol = rand();
+    for (let line of lines) {
+      const a = grid[line[0][0]][line[0][1]];
+      const b = grid[line[1][0]][line[1][1]];
+      const c = grid[line[2][0]][line[2][1]];
 
-      for (let [r, c] of winLine) {
-        grid[r][c] = symbol;
+      if (a === b && b === c) {
+        win = bet * 5;
+        result = "🔥 GEWINNLINIE!";
+        winCells = line;
       }
-
-      win = bet * 5;
-      result = "🔥 GEWINNLINIE!";
     }
 
-    // 💎 BONUS
+    // 💎 Bonus
     if (grid.flat().includes('7️⃣')) {
       win += bet * 2;
     }
 
-    add(id, win);
+    // 🎨 VISUAL HIGHLIGHT (LINE MARKED)
+    if (winCells.length) {
+      for (let [r, c] of winCells) {
+        grid[r][c] = `🟡${grid[r][c]}🟡`;
+      }
+    }
+
+    addCoins(id, win);
 
     await msg.edit(
 `🎰 SLOT MACHINE 🎰
@@ -184,8 +189,8 @@ ${grid[1].join(' | ')}
 ${grid[2].join(' | ')}
 
 ${result}
-💰 +${win}
-💰 Total: ${get(id)}`
+💰 Gewinn: +${win}
+💰 Kontostand: ${getCoins(id)}`
     );
   }
 });
