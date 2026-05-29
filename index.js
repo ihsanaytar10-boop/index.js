@@ -10,28 +10,71 @@ const client = new Client({
 
 const fruits = ['🍒', '🍋', '🍉', '🍇', '🍓', '🍍', '7️⃣'];
 
+/*
+━━━━━━━━━━━━━━━━━━━━
+💰 COINS SYSTEM (FIXED)
+━━━━━━━━━━━━━━━━━━━━
+*/
+
 const coins = {};
+
+function getCoins(id) {
+  if (!coins[id]) coins[id] = 1000;
+  return coins[id];
+}
+
+function addCoins(id, amount) {
+  if (!coins[id]) coins[id] = 1000;
+  coins[id] += amount;
+}
+
+function removeCoins(id, amount) {
+  if (!coins[id]) coins[id] = 1000;
+  coins[id] -= amount;
+}
+
+/*
+━━━━━━━━━━━━━━━━━━━━
+🎁 DAILY COOLDOWN
+━━━━━━━━━━━━━━━━━━━━
+*/
+
 const dailyCooldown = {};
+
+/*
+━━━━━━━━━━━━━━━━━━━━
+🎲 RANDOM
+━━━━━━━━━━━━━━━━━━━━
+*/
 
 function rand() {
   return fruits[Math.floor(Math.random() * fruits.length)];
 }
 
+/*
+━━━━━━━━━━━━━━━━━━━━
+🤖 READY
+━━━━━━━━━━━━━━━━━━━━
+*/
+
 client.once('ready', () => {
   console.log(`Online als ${client.user.tag}`);
 });
+
+/*
+━━━━━━━━━━━━━━━━━━━━
+📩 COMMANDS
+━━━━━━━━━━━━━━━━━━━━
+*/
 
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
   const id = message.author.id;
 
-  // START COINS
-  if (!coins[id]) coins[id] = 1000;
-
-  // 💰 BALANCE
+  // 💰 COINS
   if (message.content === '!coins') {
-    return message.reply(`💰 Du hast **${coins[id]} Coins**`);
+    return message.reply(`💰 Du hast **${getCoins(id)} Coins**`);
   }
 
   // 🎁 DAILY
@@ -40,30 +83,26 @@ client.on('messageCreate', async (message) => {
     const now = Date.now();
 
     if (dailyCooldown[id] && now - dailyCooldown[id] < 24 * 60 * 60 * 1000) {
-      return message.reply('⏳ Du hast dein Daily schon geholt!');
+      return message.reply('⏳ Daily schon abgeholt!');
     }
 
     dailyCooldown[id] = now;
-    coins[id] += 5000;
+    addCoins(id, 5000);
 
-    return message.reply('🎁 Du hast **5000 Coins Daily** bekommen!');
+    return message.reply('🎁 +5000 Coins erhalten!');
   }
 
-  // 🎰 SLOT WITH BET
+  // 🎰 SLOT
   if (message.content.startsWith('!slot')) {
 
     let bet = parseInt(message.content.split(' ')[1]);
 
-    if (!bet) {
-      return message.reply('❌ Nutze: !slot <einsatz>');
-    }
+    if (!bet) return message.reply('❌ !slot <einsatz>');
+    if (getCoins(id) < bet) return message.reply('❌ Nicht genug Coins!');
 
-    if (bet <= 0) return message.reply('❌ Ungültiger Einsatz!');
-    if (coins[id] < bet) return message.reply('❌ Nicht genug Coins!');
+    removeCoins(id, bet);
 
-    coins[id] -= bet;
-
-    let msg = await message.reply('🎰 Dreht...');
+    let msg = await message.reply('🎰 Spinning...');
 
     let grid;
 
@@ -86,40 +125,67 @@ ${grid[2].join(' | ')}`
       await new Promise(r => setTimeout(r, 250));
     }
 
-    let flat = grid.flat();
+    /*
+    ━━━━━━━━━━━━━━━━━━━━━
+    🧠 WIN LOGIC
+    ━━━━━━━━━━━━━━━━━━━━━
+    */
 
     let win = 0;
     let result = "😢 Verloren";
 
-    // JACKPOT
-    if (flat[0] === flat[1] && flat[1] === flat[2]) {
-      win = bet * 10;
-      result = `🔥 JACKPOT +${win}`;
+    const rows = grid;
+    const flat = grid.flat();
+
+    const row1 = rows[0];
+    const row2 = rows[1];
+    const row3 = rows[2];
+
+    // 🥇 3 gleiche in einer Zeile (GEWINNLINIE)
+    if (row1[0] === row1[1] && row1[1] === row1[2]) {
+      win += bet * 5;
+      result = "🔥 Gewinnlinie 1 (Top Row)";
     }
 
-    // LUCKY 7
-    else if (flat.includes('7️⃣')) {
-      win = bet * 3;
-      result = `✨ Lucky 7 +${win}`;
+    if (row2[0] === row2[1] && row2[1] === row2[2]) {
+      win += bet * 5;
+      result = "🔥 Gewinnlinie 2 (Middle Row)";
     }
 
-    // PAIR
-    else if (new Set(flat).size < 9) {
-      win = Math.floor(bet * 1.5);
-      result = `🎉 Kleiner Gewinn +${win}`;
+    if (row3[0] === row3[1] && row3[1] === row3[2]) {
+      win += bet * 5;
+      result = "🔥 Gewinnlinie 3 (Bottom Row)";
     }
 
-    coins[id] += win;
+    // 💎 Diagonale 1
+    if (rows[0][0] === rows[1][1] && rows[1][1] === rows[2][2]) {
+      win += bet * 8;
+      result = "💎 Diagonale Gewinn!";
+    }
+
+    // 💎 Diagonale 2
+    if (rows[0][2] === rows[1][1] && rows[1][1] === rows[2][0]) {
+      win += bet * 8;
+      result = "💎 Diagonale Gewinn!";
+    }
+
+    // 🔥 Lucky 7 Bonus
+    if (flat.includes('7️⃣')) {
+      win += bet * 2;
+    }
+
+    addCoins(id, win);
 
     msg.edit(
 `🎰 SLOT MACHINE 🎰
 
-${grid[0].join(' | ')}
-${grid[1].join(' | ')}
-${grid[2].join(' | ')}
+${rows[0].join(' | ')}
+${rows[1].join(' | ')}
+${rows[2].join(' | ')}
 
 ${result}
-💰 Kontostand: ${coins[id]}`
+💰 Gewinn: +${win}
+💰 Kontostand: ${getCoins(id)}`
     );
   }
 });
