@@ -1,4 +1,4 @@
-console.log("🔥 CASINO BOT ONLINE (STABLE JSON VERSION)");
+console.log("🔥 CASINO BOT START (STABLE JSON FIX)");
 
 const { Client, GatewayIntentBits } = require('discord.js');
 const fs = require('fs');
@@ -13,7 +13,7 @@ const client = new Client({
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-💾 SAFE JSON STORAGE (FIXED)
+💾 STORAGE FIX (IMPORTANT)
 ━━━━━━━━━━━━━━━━━━━━
 */
 
@@ -21,6 +21,7 @@ const FILE = './coins.json';
 
 let coins = {};
 
+// LOAD
 function load() {
   try {
     coins = JSON.parse(fs.readFileSync(FILE, 'utf8'));
@@ -28,21 +29,32 @@ function load() {
     coins = {};
   }
 }
+load();
 
+// SAVE (SAFE VERSION)
 function save() {
   fs.writeFileSync(FILE, JSON.stringify(coins, null, 2));
 }
 
-load();
-
-function get(id) {
-  if (!coins[id]) coins[id] = { balance: 1000, lastDaily: 0 };
-  return coins[id];
-}
-
-function set(id, data) {
-  coins[id] = data;
+// AUTO BACKUP (VERY IMPORTANT FOR RAILWAY)
+setInterval(() => {
   save();
+}, 10000);
+
+/*
+━━━━━━━━━━━━━━━━━━━━
+💰 USER SYSTEM
+━━━━━━━━━━━━━━━━━━━━
+*/
+
+function getUser(id) {
+  if (!coins[id]) {
+    coins[id] = {
+      balance: 1000,
+      lastDaily: 0
+    };
+  }
+  return coins[id];
 }
 
 /*
@@ -62,7 +74,7 @@ client.on('messageCreate', async (msg) => {
   if (msg.author.bot) return;
 
   const id = msg.author.id;
-  const user = get(id);
+  const user = getUser(id);
 
   /*
   💰 COINS
@@ -84,7 +96,7 @@ client.on('messageCreate', async (msg) => {
     user.balance += 5000;
     user.lastDaily = now;
 
-    set(id, user);
+    save();
 
     return msg.reply("🎁 +5000 Coins erhalten!");
   }
@@ -102,7 +114,7 @@ client.on('messageCreate', async (msg) => {
     }
 
     user.balance -= bet;
-    set(id, user);
+    save();
 
     let message = await msg.reply("🎰 Spinning...");
 
@@ -160,7 +172,7 @@ ${grid[2].join(" | ")}`
     }
 
     user.balance += win;
-    set(id, user);
+    save();
 
     await message.edit(
 `🎰 SLOT MACHINE 🎰
