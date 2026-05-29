@@ -11,19 +11,37 @@ const client = new Client({
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-💾 SAVE SYSTEM
+💾 SAFE STORAGE (ULTRA FIX)
 ━━━━━━━━━━━━━━━━━━━━
 */
 
+const FILE = './coins.json';
+
 let coins = {};
 
-if (fs.existsSync('./coins.json')) {
-  coins = JSON.parse(fs.readFileSync('./coins.json'));
+// SAFE LOAD
+function loadCoins() {
+  try {
+    if (fs.existsSync(FILE)) {
+      coins = JSON.parse(fs.readFileSync(FILE, 'utf8'));
+    }
+  } catch (e) {
+    coins = {};
+  }
 }
 
+// SAFE SAVE (force flush)
 function saveCoins() {
-  fs.writeFileSync('./coins.json', JSON.stringify(coins, null, 2));
+  fs.writeFileSync(FILE, JSON.stringify(coins, null, 2), 'utf8');
 }
+
+loadCoins();
+
+/*
+━━━━━━━━━━━━━━━━━━━━
+💰 COINS SYSTEM
+━━━━━━━━━━━━━━━━━━━━
+*/
 
 function getCoins(id) {
   if (!coins[id]) coins[id] = 1000;
@@ -64,6 +82,20 @@ function rand() {
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
+🔁 SAFE SHUTDOWN SAVE (RESTART FIX)
+━━━━━━━━━━━━━━━━━━━━
+*/
+
+function forceSave() {
+  saveCoins();
+}
+
+process.on('exit', forceSave);
+process.on('SIGINT', () => { forceSave(); process.exit(); });
+process.on('SIGTERM', () => { forceSave(); process.exit(); });
+
+/*
+━━━━━━━━━━━━━━━━━━━━
 🤖 READY
 ━━━━━━━━━━━━━━━━━━━━
 */
@@ -85,7 +117,7 @@ client.on('messageCreate', async (message) => {
 
   // 💰 BALANCE
   if (message.content === '!coins') {
-    return message.reply(`💰 Du hast **${getCoins(id)} Coins**`);
+    return message.reply(`💰 ${getCoins(id)} Coins`);
   }
 
   // 🎁 DAILY
@@ -93,14 +125,14 @@ client.on('messageCreate', async (message) => {
 
     const now = Date.now();
 
-    if (daily[id] && now - daily[id] < 24 * 60 * 60 * 1000) {
+    if (daily[id] && now - daily[id] < 86400000) {
       return message.reply('⏳ Daily schon abgeholt!');
     }
 
     daily[id] = now;
     addCoins(id, 5000);
 
-    return message.reply('🎁 +5000 Coins erhalten!');
+    return message.reply('🎁 +5000 Coins');
   }
 
   // 🎰 SLOT
@@ -117,7 +149,6 @@ client.on('messageCreate', async (message) => {
 
     let grid;
 
-    // 🎰 ANIMATION
     for (let i = 0; i < 8; i++) {
 
       grid = [
@@ -139,13 +170,13 @@ ${grid[2].join(' | ')}`
 
     /*
     ━━━━━━━━━━━━━━━━━━━━━
-    🏆 WIN LOGIC + VISUAL LINE
+    🏆 WIN LOGIC + FIXED VISUAL LINE
     ━━━━━━━━━━━━━━━━━━━━━
     */
 
     let win = 0;
     let result = "😢 Verloren";
-    let winCells = [];
+    let winLine = null;
 
     const lines = [
       [[0,0],[0,1],[0,2]],
@@ -156,6 +187,7 @@ ${grid[2].join(' | ')}`
     ];
 
     for (let line of lines) {
+
       const a = grid[line[0][0]][line[0][1]];
       const b = grid[line[1][0]][line[1][1]];
       const c = grid[line[2][0]][line[2][1]];
@@ -163,18 +195,17 @@ ${grid[2].join(' | ')}`
       if (a === b && b === c) {
         win = bet * 5;
         result = "🔥 GEWINNLINIE!";
-        winCells = line;
+        winLine = line;
       }
     }
 
-    // 💎 Bonus
     if (grid.flat().includes('7️⃣')) {
       win += bet * 2;
     }
 
-    // 🎨 VISUAL HIGHLIGHT (LINE MARKED)
-    if (winCells.length) {
-      for (let [r, c] of winCells) {
+    // 🎨 VISUAL MARK (FIXED)
+    if (winLine) {
+      for (let [r, c] of winLine) {
         grid[r][c] = `🟡${grid[r][c]}🟡`;
       }
     }
@@ -189,8 +220,8 @@ ${grid[1].join(' | ')}
 ${grid[2].join(' | ')}
 
 ${result}
-💰 Gewinn: +${win}
-💰 Kontostand: ${getCoins(id)}`
+💰 +${win}
+💰 ${getCoins(id)} Coins`
     );
   }
 });
