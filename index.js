@@ -1,3 +1,4 @@
+console.log("🔥 VERSION 999 AKTIV");
 console.log("🔥 CASINO BOT ONLINE (STABLE FINAL)");
 
 const { Client, GatewayIntentBits } = require('discord.js');
