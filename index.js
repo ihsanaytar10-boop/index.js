@@ -1,7 +1,7 @@
-console.log("🔥 STABLE SQLITE CASINO BOT");
+console.log("🔥 CASINO BOT ONLINE (STABLE JSON VERSION)");
 
 const { Client, GatewayIntentBits } = require('discord.js');
-const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
 
 const client = new Client({
   intents: [
@@ -13,48 +13,41 @@ const client = new Client({
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-💾 SQLITE DATABASE
+💾 SAFE JSON STORAGE (FIXED)
 ━━━━━━━━━━━━━━━━━━━━
 */
 
-const db = new sqlite3.Database('./coins.db');
+const FILE = './coins.json';
 
-db.run(`
-CREATE TABLE IF NOT EXISTS users (
-  userId TEXT PRIMARY KEY,
-  coins INTEGER,
-  lastDaily INTEGER
-)
-`);
+let coins = {};
 
-/*
-━━━━━━━━━━━━━━━━━━━━
-💰 HELPERS
-━━━━━━━━━━━━━━━━━━━━
-*/
-
-function getUser(id, cb) {
-  db.get("SELECT * FROM users WHERE userId = ?", [id], (err, row) => {
-    if (!row) {
-      db.run("INSERT INTO users (userId, coins, lastDaily) VALUES (?, ?, ?)", [id, 1000, 0]);
-      cb({ userId: id, coins: 1000, lastDaily: 0 });
-    } else {
-      cb(row);
-    }
-  });
+function load() {
+  try {
+    coins = JSON.parse(fs.readFileSync(FILE, 'utf8'));
+  } catch {
+    coins = {};
+  }
 }
 
-function updateCoins(id, coins) {
-  db.run("UPDATE users SET coins = ? WHERE userId = ?", [coins, id]);
+function save() {
+  fs.writeFileSync(FILE, JSON.stringify(coins, null, 2));
 }
 
-function updateDaily(id, time) {
-  db.run("UPDATE users SET lastDaily = ? WHERE userId = ?", [time, id]);
+load();
+
+function get(id) {
+  if (!coins[id]) coins[id] = { balance: 1000, lastDaily: 0 };
+  return coins[id];
+}
+
+function set(id, data) {
+  coins[id] = data;
+  save();
 }
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-🎰 SLOT
+🎰 SLOT SYSTEM
 ━━━━━━━━━━━━━━━━━━━━
 */
 
@@ -65,39 +58,35 @@ client.once('ready', () => {
   console.log(`🎰 Online als ${client.user.tag}`);
 });
 
-client.on('messageCreate', (msg) => {
+client.on('messageCreate', async (msg) => {
   if (msg.author.bot) return;
 
   const id = msg.author.id;
+  const user = get(id);
 
   /*
   💰 COINS
   */
   if (msg.content === '!coins') {
-    getUser(id, (user) => {
-      msg.reply(`💰 Du hast **${user.coins} Coins**`);
-    });
+    return msg.reply(`💰 Du hast **${user.balance} Coins**`);
   }
 
   /*
   🎁 DAILY
   */
   if (msg.content === '!daily') {
-    getUser(id, (user) => {
-      const now = Date.now();
+    const now = Date.now();
 
-      if (now - user.lastDaily < 86400000) {
-        return msg.reply("⏳ Daily schon geholt!");
-      }
+    if (now - user.lastDaily < 86400000) {
+      return msg.reply("⏳ Daily schon geholt!");
+    }
 
-      user.coins += 5000;
-      user.lastDaily = now;
+    user.balance += 5000;
+    user.lastDaily = now;
 
-      updateCoins(id, user.coins);
-      updateDaily(id, now);
+    set(id, user);
 
-      msg.reply("🎁 +5000 Coins erhalten!");
-    });
+    return msg.reply("🎁 +5000 Coins erhalten!");
   }
 
   /*
@@ -108,74 +97,72 @@ client.on('messageCreate', (msg) => {
     let bet = parseInt(msg.content.split(' ')[1]);
     if (!bet) return msg.reply("❌ !slot <einsatz>");
 
-    getUser(id, async (user) => {
+    if (user.balance < bet) {
+      return msg.reply("❌ zu wenig Coins");
+    }
 
-      if (user.coins < bet) {
-        return msg.reply("❌ zu wenig Coins");
-      }
+    user.balance -= bet;
+    set(id, user);
 
-      user.coins -= bet;
-      updateCoins(id, user.coins);
+    let message = await msg.reply("🎰 Spinning...");
 
-      let message = await msg.reply("🎰 Spinning...");
+    let grid;
 
-      let grid;
+    for (let i = 0; i < 6; i++) {
 
-      for (let i = 0; i < 6; i++) {
+      grid = [
+        [rand(), rand(), rand()],
+        [rand(), rand(), rand()],
+        [rand(), rand(), rand()]
+      ];
 
-        grid = [
-          [rand(), rand(), rand()],
-          [rand(), rand(), rand()],
-          [rand(), rand(), rand()]
-        ];
-
-        await message.edit(
+      await message.edit(
 `🎰 SLOT MACHINE 🎰
 
 ${grid[0].join(" | ")}
 ${grid[1].join(" | ")}
 ${grid[2].join(" | ")}`
-        );
+      );
 
-        await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    /*
+    🏆 WIN LOGIC
+    */
+    let win = 0;
+    let winRow = null;
+    let result = "😢 Verloren";
+
+    const lines = [
+      [[0,0],[0,1],[0,2]],
+      [[1,0],[1,1],[1,2]],
+      [[2,0],[2,1],[2,2]],
+      [[0,0],[1,1],[2,2]],
+      [[0,2],[1,1],[2,0]]
+    ];
+
+    for (let line of lines) {
+
+      const a = grid[line[0][0]][line[0][1]];
+      const b = grid[line[1][0]][line[1][1]];
+      const c = grid[line[2][0]][line[2][1]];
+
+      if (a === b && b === c) {
+        win = bet * 5;
+        winRow = [a, b, c];
+        result = "🔥 GEWINN!";
       }
+    }
 
-      /*
-      🏆 WIN LOGIC
-      */
-      let win = 0;
-      let winRow = null;
-      let result = "😢 Verloren";
+    if (grid.flat().includes("7️⃣")) {
+      win += bet * 2;
+    }
 
-      const lines = [
-        [[0,0],[0,1],[0,2]],
-        [[1,0],[1,1],[1,2]],
-        [[2,0],[2,1],[2,2]],
-        [[0,0],[1,1],[2,2]],
-        [[0,2],[1,1],[2,0]]
-      ];
+    user.balance += win;
+    set(id, user);
 
-      for (let line of lines) {
-
-        const a = grid[line[0][0]][line[0][1]];
-        const b = grid[line[1][0]][line[1][1]];
-        const c = grid[line[2][0]][line[2][1]];
-
-        if (a === b && b === c) {
-          win = bet * 5;
-          winRow = [a, b, c];
-          result = "🔥 GEWINN!";
-        }
-      }
-
-      if (grid.flat().includes("7️⃣")) {
-        win += bet * 2;
-      }
-
-      user.coins += win;
-      updateCoins(id, user.coins);
-
-      await message.edit(
+    await message.edit(
 `🎰 SLOT MACHINE 🎰
 
 ${grid[0].join(" | ")}
@@ -184,11 +171,10 @@ ${grid[2].join(" | ")}
 
 ${result}
 💰 Gewinn: +${win}
-💰 Kontostand: ${user.coins}
+💰 Kontostand: ${user.balance}
 
 ${winRow ? "🎉 GEWINN: " + winRow.join(" | ") : ""}`
-      );
-    });
+    );
   }
 });
 
