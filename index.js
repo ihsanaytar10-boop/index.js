@@ -1,3 +1,4 @@
+console.log("BOT STARTET JETZT");
 const { Client, GatewayIntentBits } = require('discord.js');
 const fs = require('fs');
 
