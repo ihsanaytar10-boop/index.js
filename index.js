@@ -1,76 +1,63 @@
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require("discord.js");
-
-console.log("Bot startet...");
-
-// ENV CHECK
-const TOKEN = process.env.TOKEN;
-const CLIENT_ID = process.env.CLIENT_ID;
-
-if (!TOKEN || !CLIENT_ID) {
-  console.log("FEHLER: TOKEN oder CLIENT_ID fehlt!");
-  process.exit(1);
-}
+const { Client, GatewayIntentBits } = require('discord.js');
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds]
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
 });
 
-// SLOT SYMBOLS
-const symbols = ["🍒", "🍋", "⭐", "7️⃣"];
+const TOKEN = 'DEIN_BOT_TOKEN';
 
-// SLASH COMMAND
-const commands = [
-  new SlashCommandBuilder()
-    .setName("slot")
-    .setDescription("Slot Machine")
-    .toJSON()
-];
+const fruits = ['🍒', '🍋', '🍉', '🍇', '🍓', '🍍', '7️⃣'];
 
-// REGISTER COMMAND
-const rest = new REST({ version: "10" }).setToken(TOKEN);
+client.once('ready', () => {
+  console.log(`${client.user.tag} ist online!`);
+});
 
-(async () => {
-  try {
-    console.log("Registering slash command...");
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
 
-    await rest.put(
-      Routes.applicationCommands(CLIENT_ID),
-      { body: commands }
-    );
+  if (message.content === '!slot') {
 
-    console.log("Slash Command ready");
-  } catch (err) {
-    console.error("Command error:", err);
+    const msg = await message.reply('🎰 Dreht...');
+
+    let spins = 0;
+
+    const interval = setInterval(async () => {
+
+      const r1 = fruits[Math.floor(Math.random() * fruits.length)];
+      const r2 = fruits[Math.floor(Math.random() * fruits.length)];
+      const r3 = fruits[Math.floor(Math.random() * fruits.length)];
+
+      await msg.edit(`
+🎰 **777 SLOT MACHINE** 🎰
+
+┃ ${r1} ┃ ${r2} ┃ ${r3} ┃
+      `);
+
+      spins++;
+
+      if (spins >= 10) {
+        clearInterval(interval);
+
+        let result = '😢 Leider verloren!';
+
+        if (r1 === r2 && r2 === r3) {
+          result = '🔥 JACKPOT!!! 🔥';
+        }
+        else if (r1 === '7️⃣' || r2 === '7️⃣' || r3 === '7️⃣') {
+          result = '✨ Lucky 7! ✨';
+        }
+
+        await msg.edit(`
+🎰 **777 SLOT MACHINE** 🎰
+
+┃ ${r1} ┃ ${r2} ┃ ${r3} ┃
+
+${result}
+        `);
+      }
+
+    }, 500);
   }
-})();
-
-// READY
-client.once("ready", () => {
-  console.log(`Online als ${client.user.tag}`);
 });
 
-// SLOT COMMAND
-client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
-
-  if (interaction.commandName === "slot") {
-
-    const r = () =>
-      symbols[Math.floor(Math.random() * symbols.length)];
-
-    const row1 = `${r()} ${r()} ${r()}`;
-    const row2 = `${r()} ${r()} ${r()}`;
-    const row3 = `${r()} ${r()} ${r()}`;
-
-    await interaction.reply({
-      content: "```txt\n" +
-        row1 + "\n" +
-        row2 + "\n" +
-        row3 +
-        "\n```"
-    });
-  }
-});
-
-// LOGIN
 client.login(TOKEN);
