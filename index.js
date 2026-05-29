@@ -1,7 +1,7 @@
-console.log("🔥 STABLE CASINO BOT START");
+console.log("🔥 STABLE SQLITE CASINO BOT");
 
 const { Client, GatewayIntentBits } = require('discord.js');
-const mongoose = require('mongoose');
+const sqlite3 = require('sqlite3').verbose();
 
 const client = new Client({
   intents: [
@@ -13,45 +13,48 @@ const client = new Client({
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-💾 MONGODB CONNECT
+💾 SQLITE DATABASE
 ━━━━━━━━━━━━━━━━━━━━
 */
 
-mongoose.connect(process.env.MONGO_URL)
-  .then(() => console.log("💾 MongoDB verbunden"))
-  .catch(err => console.log(err));
+const db = new sqlite3.Database('./coins.db');
 
-const userSchema = new mongoose.Schema({
-  userId: String,
-  coins: Number,
-  lastDaily: Number
-});
-
-const User = mongoose.model("User", userSchema);
+db.run(`
+CREATE TABLE IF NOT EXISTS users (
+  userId TEXT PRIMARY KEY,
+  coins INTEGER,
+  lastDaily INTEGER
+)
+`);
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-💰 USER HELPERS
+💰 HELPERS
 ━━━━━━━━━━━━━━━━━━━━
 */
 
-async function getUser(id) {
-  let user = await User.findOne({ userId: id });
+function getUser(id, cb) {
+  db.get("SELECT * FROM users WHERE userId = ?", [id], (err, row) => {
+    if (!row) {
+      db.run("INSERT INTO users (userId, coins, lastDaily) VALUES (?, ?, ?)", [id, 1000, 0]);
+      cb({ userId: id, coins: 1000, lastDaily: 0 });
+    } else {
+      cb(row);
+    }
+  });
+}
 
-  if (!user) {
-    user = await User.create({
-      userId: id,
-      coins: 1000,
-      lastDaily: 0
-    });
-  }
+function updateCoins(id, coins) {
+  db.run("UPDATE users SET coins = ? WHERE userId = ?", [coins, id]);
+}
 
-  return user;
+function updateDaily(id, time) {
+  db.run("UPDATE users SET lastDaily = ? WHERE userId = ?", [time, id]);
 }
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-🎰 SLOT SYSTEM
+🎰 SLOT
 ━━━━━━━━━━━━━━━━━━━━
 */
 
@@ -59,10 +62,10 @@ const symbols = ['🍒','🍋','🍉','🍇','🍓','🍍','7️⃣'];
 const rand = () => symbols[Math.floor(Math.random() * symbols.length)];
 
 client.once('ready', () => {
-  console.log(`🎰 Casino online als ${client.user.tag}`);
+  console.log(`🎰 Online als ${client.user.tag}`);
 });
 
-client.on('messageCreate', async (msg) => {
+client.on('messageCreate', (msg) => {
   if (msg.author.bot) return;
 
   const id = msg.author.id;
@@ -71,28 +74,30 @@ client.on('messageCreate', async (msg) => {
   💰 COINS
   */
   if (msg.content === '!coins') {
-    const user = await getUser(id);
-    return msg.reply(`💰 Du hast **${user.coins} Coins**`);
+    getUser(id, (user) => {
+      msg.reply(`💰 Du hast **${user.coins} Coins**`);
+    });
   }
 
   /*
   🎁 DAILY
   */
   if (msg.content === '!daily') {
-    const user = await getUser(id);
+    getUser(id, (user) => {
+      const now = Date.now();
 
-    const now = Date.now();
+      if (now - user.lastDaily < 86400000) {
+        return msg.reply("⏳ Daily schon geholt!");
+      }
 
-    if (now - user.lastDaily < 86400000) {
-      return msg.reply("⏳ Daily schon geholt!");
-    }
+      user.coins += 5000;
+      user.lastDaily = now;
 
-    user.coins += 5000;
-    user.lastDaily = now;
+      updateCoins(id, user.coins);
+      updateDaily(id, now);
 
-    await user.save();
-
-    return msg.reply("🎁 +5000 Coins erhalten!");
+      msg.reply("🎁 +5000 Coins erhalten!");
+    });
   }
 
   /*
@@ -103,74 +108,74 @@ client.on('messageCreate', async (msg) => {
     let bet = parseInt(msg.content.split(' ')[1]);
     if (!bet) return msg.reply("❌ !slot <einsatz>");
 
-    const user = await getUser(id);
+    getUser(id, async (user) => {
 
-    if (user.coins < bet) {
-      return msg.reply("❌ zu wenig Coins");
-    }
+      if (user.coins < bet) {
+        return msg.reply("❌ zu wenig Coins");
+      }
 
-    user.coins -= bet;
-    await user.save();
+      user.coins -= bet;
+      updateCoins(id, user.coins);
 
-    let message = await msg.reply("🎰 Spinning...");
+      let message = await msg.reply("🎰 Spinning...");
 
-    let grid;
+      let grid;
 
-    for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 6; i++) {
 
-      grid = [
-        [rand(), rand(), rand()],
-        [rand(), rand(), rand()],
-        [rand(), rand(), rand()]
-      ];
+        grid = [
+          [rand(), rand(), rand()],
+          [rand(), rand(), rand()],
+          [rand(), rand(), rand()]
+        ];
 
-      await message.edit(
+        await message.edit(
 `🎰 SLOT MACHINE 🎰
 
 ${grid[0].join(" | ")}
 ${grid[1].join(" | ")}
 ${grid[2].join(" | ")}`
-      );
+        );
 
-      await new Promise(r => setTimeout(r, 200));
-    }
-
-    /*
-    🏆 WIN LOGIC
-    */
-    let win = 0;
-    let winRow = null;
-    let result = "😢 Verloren";
-
-    const lines = [
-      [[0,0],[0,1],[0,2]],
-      [[1,0],[1,1],[1,2]],
-      [[2,0],[2,1],[2,2]],
-      [[0,0],[1,1],[2,2]],
-      [[0,2],[1,1],[2,0]]
-    ];
-
-    for (let line of lines) {
-
-      const a = grid[line[0][0]][line[0][1]];
-      const b = grid[line[1][0]][line[1][1]];
-      const c = grid[line[2][0]][line[2][1]];
-
-      if (a === b && b === c) {
-        win = bet * 5;
-        winRow = [a, b, c];
-        result = "🔥 GEWINN!";
+        await new Promise(r => setTimeout(r, 200));
       }
-    }
 
-    if (grid.flat().includes("7️⃣")) {
-      win += bet * 2;
-    }
+      /*
+      🏆 WIN LOGIC
+      */
+      let win = 0;
+      let winRow = null;
+      let result = "😢 Verloren";
 
-    user.coins += win;
-    await user.save();
+      const lines = [
+        [[0,0],[0,1],[0,2]],
+        [[1,0],[1,1],[1,2]],
+        [[2,0],[2,1],[2,2]],
+        [[0,0],[1,1],[2,2]],
+        [[0,2],[1,1],[2,0]]
+      ];
 
-    await message.edit(
+      for (let line of lines) {
+
+        const a = grid[line[0][0]][line[0][1]];
+        const b = grid[line[1][0]][line[1][1]];
+        const c = grid[line[2][0]][line[2][1]];
+
+        if (a === b && b === c) {
+          win = bet * 5;
+          winRow = [a, b, c];
+          result = "🔥 GEWINN!";
+        }
+      }
+
+      if (grid.flat().includes("7️⃣")) {
+        win += bet * 2;
+      }
+
+      user.coins += win;
+      updateCoins(id, user.coins);
+
+      await message.edit(
 `🎰 SLOT MACHINE 🎰
 
 ${grid[0].join(" | ")}
@@ -179,10 +184,11 @@ ${grid[2].join(" | ")}
 
 ${result}
 💰 Gewinn: +${win}
-💰 Kontostand: ${user.coins} Coins
+💰 Kontostand: ${user.coins}
 
 ${winRow ? "🎉 GEWINN: " + winRow.join(" | ") : ""}`
-    );
+      );
+    });
   }
 });
 
