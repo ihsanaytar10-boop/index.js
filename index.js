@@ -1,4 +1,4 @@
-console.log("🔥 CASINO BOT START (STABLE JSON FIX)");
+console.log("🔥 CASINO BOT ONLINE (STABLE FINAL)");
 
 const { Client, GatewayIntentBits } = require('discord.js');
 const fs = require('fs');
@@ -13,7 +13,7 @@ const client = new Client({
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-💾 STORAGE FIX (IMPORTANT)
+💾 SAFE STORAGE
 ━━━━━━━━━━━━━━━━━━━━
 */
 
@@ -21,7 +21,6 @@ const FILE = './coins.json';
 
 let coins = {};
 
-// LOAD
 function load() {
   try {
     coins = JSON.parse(fs.readFileSync(FILE, 'utf8'));
@@ -29,17 +28,16 @@ function load() {
     coins = {};
   }
 }
-load();
 
-// SAVE (SAFE VERSION)
 function save() {
   fs.writeFileSync(FILE, JSON.stringify(coins, null, 2));
 }
 
-// AUTO BACKUP (VERY IMPORTANT FOR RAILWAY)
-setInterval(() => {
-  save();
-}, 10000);
+// load on start
+load();
+
+// auto save (VERY IMPORTANT)
+setInterval(save, 5000);
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
@@ -59,16 +57,28 @@ function getUser(id) {
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-🎰 SLOT SYSTEM
+🎰 SLOT SYMBOLS
 ━━━━━━━━━━━━━━━━━━━━
 */
 
 const symbols = ['🍒','🍋','🍉','🍇','🍓','🍍','7️⃣'];
 const rand = () => symbols[Math.floor(Math.random() * symbols.length)];
 
+/*
+━━━━━━━━━━━━━━━━━━━━
+🤖 READY
+━━━━━━━━━━━━━━━━━━━━
+*/
+
 client.once('ready', () => {
   console.log(`🎰 Online als ${client.user.tag}`);
 });
+
+/*
+━━━━━━━━━━━━━━━━━━━━
+📩 COMMANDS
+━━━━━━━━━━━━━━━━━━━━
+*/
 
 client.on('messageCreate', async (msg) => {
   if (msg.author.bot) return;
@@ -174,6 +184,10 @@ ${grid[2].join(" | ")}`
     user.balance += win;
     save();
 
+    /*
+    🎰 FINAL OUTPUT (WICHTIG: GEWINN FRÜCHTE UNTEN)
+    */
+
     await message.edit(
 `🎰 SLOT MACHINE 🎰
 
@@ -185,7 +199,7 @@ ${result}
 💰 Gewinn: +${win}
 💰 Kontostand: ${user.balance}
 
-${winRow ? "🎉 GEWINN: " + winRow.join(" | ") : ""}`
+${winRow ? "🍓 GEWONNEN: " + winRow.join(" | ") : ""}`
     );
   }
 });
