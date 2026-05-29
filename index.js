@@ -15,7 +15,7 @@ const client = new Client({
 
 const symbols = ["🍒", "🍋", "⭐", "7️⃣"];
 
-// Slash Command registrieren
+// Slash Command
 const commands = [
   new SlashCommandBuilder()
     .setName("slot")
@@ -49,6 +49,10 @@ client.on("interactionCreate", async (interaction) => {
 
   if (interaction.commandName === "slot") {
     try {
+
+      // 🔥 WICHTIG: verhindert "Anwendung reagiert nicht"
+      await interaction.deferReply();
+
       const r = () =>
         symbols[Math.floor(Math.random() * symbols.length)];
 
@@ -56,19 +60,20 @@ client.on("interactionCreate", async (interaction) => {
       const row2 = `${r()} ${r()} ${r()}`;
       const row3 = `${r()} ${r()} ${r()}`;
 
-      await interaction.reply({
-        content:
-"```txt\n" +
-row1 + "\n" +
-row2 + "\n" +
-row3 +
-"\n```"
-      });
+      await interaction.editReply(
+        "```txt\n" +
+        row1 + "\n" +
+        row2 + "\n" +
+        row3 +
+        "\n```"
+      );
 
     } catch (err) {
       console.error(err);
 
-      if (!interaction.replied) {
+      if (interaction.deferred) {
+        await interaction.editReply("❌ Fehler beim Slot");
+      } else {
         await interaction.reply({
           content: "❌ Fehler beim Slot",
           ephemeral: true
