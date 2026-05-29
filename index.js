@@ -11,7 +11,7 @@ const client = new Client({
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-💾 SAFE STORAGE
+💾 SPEICHER SYSTEM
 ━━━━━━━━━━━━━━━━━━━━
 */
 
@@ -19,159 +19,94 @@ const FILE = './coins.json';
 
 let coins = {};
 
-function load() {
+// laden beim Start
+function loadCoins() {
   try {
-    coins = JSON.parse(fs.readFileSync(FILE, 'utf8'));
-  } catch {
+    if (fs.existsSync(FILE)) {
+      coins = JSON.parse(fs.readFileSync(FILE, 'utf8'));
+    }
+  } catch (e) {
     coins = {};
   }
 }
 
-function save() {
+// speichern
+function saveCoins() {
   fs.writeFileSync(FILE, JSON.stringify(coins, null, 2));
 }
 
-load();
+loadCoins();
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-💰 COINS
+💰 COINS LOGIC
 ━━━━━━━━━━━━━━━━━━━━
 */
 
-function get(id) {
+function getCoins(id) {
   if (!coins[id]) coins[id] = 1000;
   return coins[id];
 }
 
-function add(id, amt) {
+function addCoins(id, amount) {
   if (!coins[id]) coins[id] = 1000;
-  coins[id] += amt;
-  save();
+  coins[id] += amount;
+  saveCoins();
 }
 
-function remove(id, amt) {
+function removeCoins(id, amount) {
   if (!coins[id]) coins[id] = 1000;
-  coins[id] -= amt;
-  save();
+  coins[id] -= amount;
+  saveCoins();
 }
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-🎰 SLOT
-━━━━━━━━━━━━━━━━━━━━
-*/
-
-const fruits = ['🍒','🍋','🍉','🍇','🍓','🍍','7️⃣'];
-
-const rand = () => fruits[Math.floor(Math.random()*fruits.length)];
-
-/*
-━━━━━━━━━━━━━━━━━━━━
-🤖 BOT READY
+🤖 BOT START
 ━━━━━━━━━━━━━━━━━━━━
 */
 
 client.once('ready', () => {
-  console.log("BOT ONLINE ✔");
+  console.log(`BOT ONLINE ✔`);
 });
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-🎮 COMMANDS
+📩 COMMANDS
 ━━━━━━━━━━━━━━━━━━━━
 */
 
-client.on('messageCreate', async (msg) => {
-  if (msg.author.bot) return;
+client.on('messageCreate', (message) => {
+  if (message.author.bot) return;
 
-  const id = msg.author.id;
+  const id = message.author.id;
 
-  // 💰 BALANCE
-  if (msg.content === '!coins') {
-    return msg.reply(`💰 ${get(id)} Coins`);
+  // 💰 Kontostand
+  if (message.content === '!coins') {
+    return message.reply(`💰 Du hast **${getCoins(id)} Coins**`);
   }
 
-  // 🎁 DAILY (simpel, kein Cooldown Speicher)
-  if (msg.content === '!daily') {
-    add(id, 5000);
-    return msg.reply('🎁 +5000 Coins');
+  // 🎁 Daily
+  if (message.content === '!daily') {
+    addCoins(id, 5000);
+    return message.reply('🎁 +5000 Coins erhalten!');
   }
 
-  // 🎰 SLOT
-  if (msg.content.startsWith('!slot')) {
+  // 🎰 Test Slot (optional, ohne Fehler)
+  if (message.content.startsWith('!slot')) {
+    const bet = parseInt(message.content.split(' ')[1]);
 
-    let bet = parseInt(msg.content.split(' ')[1]);
+    if (!bet) return message.reply('❌ !slot <einsatz>');
+    if (getCoins(id) < bet) return message.reply('❌ zu wenig Coins');
 
-    if (!bet) return msg.reply("❌ !slot <einsatz>");
-    if (get(id) < bet) return msg.reply("❌ zu wenig Coins");
+    removeCoins(id, bet);
 
-    remove(id, bet);
+    const win = Math.random() < 0.4 ? bet * 2 : 0;
 
-    let message = await msg.reply("🎰 spinning...");
+    addCoins(id, win);
 
-    let grid;
-
-    for (let i = 0; i < 6; i++) {
-
-      grid = [
-        [rand(), rand(), rand()],
-        [rand(), rand(), rand()],
-        [rand(), rand(), rand()]
-      ];
-
-      await message.edit(
-`🎰 SLOT 🎰
-
-${grid[0].join(" | ")}
-${grid[1].join(" | ")}
-${grid[2].join(" | ")}`
-      );
-
-      await new Promise(r => setTimeout(r, 200));
-    }
-
-    /*
-    ━━━━━━━━━━━━━━━━━━━━━
-    🏆 WIN CHECK (EINFACH + STABIL)
-    ━━━━━━━━━━━━━━━━━━━━━
-    */
-
-    let win = 0;
-    let result = "😢 verloren";
-
-    const check = (a,b,c) => a === b && b === c;
-
-    // Reihen
-    if (check(...grid[0])) { win = bet * 5; result = "🔥 Reihe oben"; }
-    else if (check(...grid[1])) { win = bet * 5; result = "🔥 Reihe mitte"; }
-    else if (check(...grid[2])) { win = bet * 5; result = "🔥 Reihe unten"; }
-
-    // Diagonale
-    else if (grid[0][0] === grid[1][1] && grid[1][1] === grid[2][2]) {
-      win = bet * 8;
-      result = "💎 Diagonale!";
-    }
-    else if (grid[0][2] === grid[1][1] && grid[1][1] === grid[2][0]) {
-      win = bet * 8;
-      result = "💎 Diagonale!";
-    }
-
-    // Bonus
-    if (grid.flat().includes("7️⃣")) win += bet * 2;
-
-    add(id, win);
-
-    await message.edit(
-`🎰 SLOT 🎰
-
-${grid[0].join(" | ")}
-${grid[1].join(" | ")}
-${grid[2].join(" | ")}
-
-${result}
-💰 +${win}
-💰 ${get(id)} Coins`
+    return message.reply(
+      `🎰 Ergebnis: ${win > 0 ? "GEWONNEN" : "VERLOREN"}\n💰 Kontostand: ${getCoins(id)}`
     );
   }
 });
