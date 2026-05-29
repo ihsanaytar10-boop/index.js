@@ -1,8 +1,7 @@
-console.log("🔥 VERSION 999 AKTIV");
-console.log("🔥 CASINO BOT ONLINE (FINAL DEBUG VERSION)");
+console.log("🔥 CASINO BOT STARTED");
 
-const { Client, GatewayIntentBits } = require('discord.js');
-const fs = require('fs');
+const { Client, GatewayIntentBits } = require("discord.js");
+const fs = require("fs");
 
 const client = new Client({
   intents: [
@@ -12,206 +11,82 @@ const client = new Client({
   ]
 });
 
-/*
-━━━━━━━━━━━━━━━━━━━━
-💾 STORAGE
-━━━━━━━━━━━━━━━━━━━━
-*/
+const FILE = "./coins.json";
 
-const FILE = './coins.json';
-
+// LOAD
 let coins = {};
-
-/*
-📂 LOAD
-*/
-function load() {
-  try {
-    coins = JSON.parse(fs.readFileSync(FILE, 'utf8'));
-    console.log("📂 LOAD OK");
-  } catch (e) {
-    console.log("📂 NEW FILE CREATED");
-    coins = {};
-  }
+try {
+  coins = JSON.parse(fs.readFileSync(FILE, "utf8"));
+} catch {
+  coins = {};
 }
-load();
 
-/*
-💾 SAVE (DEBUG SAFE)
-*/
+// SAVE
 function save() {
-  try {
-    fs.writeFileSync(FILE, JSON.stringify(coins, null, 2));
-    console.log("💾 SAVE OK");
-  } catch (err) {
-    console.log("❌ SAVE ERROR:", err);
-  }
+  fs.writeFileSync(FILE, JSON.stringify(coins, null, 2));
 }
 
-/*
-🔥 DEBUG MONITOR (WICHTIG)
-*/
-setInterval(() => {
-  console.log("💾 COINS STATUS:", JSON.stringify(coins));
-}, 5000);
-
-/*
-━━━━━━━━━━━━━━━━━━━━
-💰 USER SYSTEM
-━━━━━━━━━━━━━━━━━━━━
-*/
-
+// USER
 function getUser(id) {
-  if (!coins[id]) {
-    coins[id] = {
-      balance: 1000,
-      lastDaily: 0
-    };
-  }
+  if (!coins[id]) coins[id] = { balance: 1000 };
   return coins[id];
 }
 
-/*
-━━━━━━━━━━━━━━━━━━━━
-🎰 SLOT
-━━━━━━━━━━━━━━━━━━━━
-*/
-
-const symbols = ['🍒','🍋','🍉','🍇','🍓','🍍','7️⃣'];
+// SYMBOLS
+const symbols = ["🍒", "🍋", "🍉", "🍇", "🍓", "🍍", "7️⃣"];
 const rand = () => symbols[Math.floor(Math.random() * symbols.length)];
 
-/*
-━━━━━━━━━━━━━━━━━━━━
-🤖 READY
-━━━━━━━━━━━━━━━━━━━━
-*/
-
-client.once('ready', () => {
-  console.log(`🎰 Online als ${client.user.tag}`);
+client.once("ready", () => {
+  console.log("🎰 Bot online:", client.user.tag);
 });
 
-/*
-━━━━━━━━━━━━━━━━━━━━
-📩 COMMANDS
-━━━━━━━━━━━━━━━━━━━━
-*/
-
-client.on('messageCreate', async (msg) => {
+client.on("messageCreate", async (msg) => {
   if (msg.author.bot) return;
 
-  const id = msg.author.id;
-  const user = getUser(id);
+  const user = getUser(msg.author.id);
 
-  /*
-  💰 COINS
-  */
-  if (msg.content === '!coins') {
-    return msg.reply(`💰 Du hast **${user.balance} Coins**`);
+  // COINS
+  if (msg.content === "!coins") {
+    return msg.reply(`💰 Coins: ${user.balance}`);
   }
 
-  /*
-  🎁 DAILY
-  */
-  if (msg.content === '!daily') {
-    const now = Date.now();
+  // SLOT
+  if (msg.content.startsWith("!slot")) {
+    let bet = parseInt(msg.content.split(" ")[1]);
 
-    if (now - user.lastDaily < 86400000) {
-      return msg.reply("⏳ Daily schon geholt!");
-    }
-
-    user.balance += 5000;
-    user.lastDaily = now;
-
-    save();
-
-    return msg.reply("🎁 +5000 Coins erhalten!");
-  }
-
-  /*
-  🎰 SLOT
-  */
-  if (msg.content.startsWith('!slot')) {
-
-    let bet = parseInt(msg.content.split(' ')[1]);
-    if (!bet) return msg.reply("❌ !slot <einsatz>");
-
-    if (user.balance < bet) {
-      return msg.reply("❌ zu wenig Coins");
-    }
+    if (!bet || bet <= 0) return msg.reply("❌ !slot <einsatz>");
+    if (user.balance < bet) return msg.reply("❌ zu wenig Coins");
 
     user.balance -= bet;
-    save();
 
-    let message = await msg.reply("🎰 Spinning...");
+    let grid = [];
 
-    let grid;
-
-    for (let i = 0; i < 6; i++) {
-
-      grid = [
-        [rand(), rand(), rand()],
-        [rand(), rand(), rand()],
-        [rand(), rand(), rand()]
-      ];
-
-      await message.edit(
-`🎰 SLOT MACHINE 🎰
-
-${grid[0].join(" | ")}
-${grid[1].join(" | ")}
-${grid[2].join(" | ")}`
-      );
-
-      await new Promise(r => setTimeout(r, 200));
+    for (let i = 0; i < 3; i++) {
+      grid.push([rand(), rand(), rand()]);
     }
 
-    /*
-    🏆 WIN SYSTEM
-    */
     let win = 0;
-    let winRow = null;
-    let result = "😢 Verloren";
+    let result = "😢 verloren";
 
-    const lines = [
-      [[0,0],[0,1],[0,2]],
-      [[1,0],[1,1],[1,2]],
-      [[2,0],[2,1],[2,2]],
-      [[0,0],[1,1],[2,2]],
-      [[0,2],[1,1],[2,0]]
-    ];
-
-    for (let line of lines) {
-
-      const a = grid[line[0][0]][line[0][1]];
-      const b = grid[line[1][0]][line[1][1]];
-      const c = grid[line[2][0]][line[2][1]];
-
-      if (a === b && b === c) {
-        win = bet * 5;
-        winRow = [a, b, c];
-        result = "🔥 GEWINN!";
-      }
-    }
-
-    if (grid.flat().includes("7️⃣")) {
-      win += bet * 2;
+    // einfache win line (3 gleiche in middle row)
+    if (grid[1][0] === grid[1][1] && grid[1][1] === grid[1][2]) {
+      win = bet * 5;
+      result = "🔥 GEWONNEN!";
     }
 
     user.balance += win;
     save();
 
-    await message.edit(
-`🎰 SLOT MACHINE 🎰
+    return msg.reply(
+`🎰 SLOT 🎰
 
 ${grid[0].join(" | ")}
 ${grid[1].join(" | ")}
 ${grid[2].join(" | ")}
 
 ${result}
-💰 Gewinn: +${win}
-💰 Kontostand: ${user.balance}
-
-${winRow ? "🍓 GEWONNENE LINIE: " + winRow.join(" | ") : ""}`
+💰 +${win}
+💰 Balance: ${user.balance}`
     );
   }
 });
