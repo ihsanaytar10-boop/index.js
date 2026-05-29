@@ -1,4 +1,4 @@
-console.log("🔥🔥🔥 NEUER CODE WIRD AUSGEFÜHRT 🔥🔥🔥");
+console.log("🔥🔥🔥 ICH BIN CODE VERSION 12345 🔥🔥🔥");
 console.log("🎰 CASINO BOT START");
 
 const { Client, GatewayIntentBits } = require("discord.js");
