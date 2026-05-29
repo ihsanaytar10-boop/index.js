@@ -24,11 +24,11 @@ client.on("interactionCreate", async (interaction) => {
 
     await interaction.reply({
       content:
-`[2;34m```txt
-${row1}
-${row2}
-${row3}
-```[0m`
+        "```txt\n" +
+        row1 + "\n" +
+        row2 + "\n" +
+        row3 +
+        "\n```"
     });
   }
 });
