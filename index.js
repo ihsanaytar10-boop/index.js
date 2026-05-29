@@ -12,12 +12,11 @@ const client = new Client({
 
 /*
 ━━━━━━━━━━━━━━━━━━━━
-💾 STORAGE (RESTART SAFE)
+💾 STORAGE (SAFE)
 ━━━━━━━━━━━━━━━━━━━━
 */
 
 const FILE = './coins.json';
-
 let coins = {};
 
 function load() {
@@ -72,7 +71,6 @@ const daily = {};
 */
 
 const symbols = ['🍒','🍋','🍉','🍇','🍓','🍍','7️⃣'];
-
 const rand = () => symbols[Math.floor(Math.random() * symbols.length)];
 
 /*
@@ -82,7 +80,7 @@ const rand = () => symbols[Math.floor(Math.random() * symbols.length)];
 */
 
 client.once('ready', () => {
-  console.log(`🎰 Casino Bot online: ${client.user.tag}`);
+  console.log(`🎰 Casino Bot online als ${client.user.tag}`);
 });
 
 /*
@@ -101,7 +99,6 @@ client.on('messageCreate', async (msg) => {
   💰 COINS
   ━━━━━━━━━━━━━━━━━━━━
   */
-
   if (msg.content === '!coins') {
     return msg.reply(`💰 Du hast **${get(id)} Coins**`);
   }
@@ -111,8 +108,8 @@ client.on('messageCreate', async (msg) => {
   🎁 DAILY
   ━━━━━━━━━━━━━━━━━━━━
   */
-
   if (msg.content === '!daily') {
+
     const now = Date.now();
 
     if (daily[id] && now - daily[id] < 86400000) {
@@ -130,7 +127,6 @@ client.on('messageCreate', async (msg) => {
   🎰 SLOT MACHINE
   ━━━━━━━━━━━━━━━━━━━━
   */
-
   if (msg.content.startsWith('!slot')) {
 
     let bet = parseInt(msg.content.split(' ')[1]);
@@ -144,7 +140,11 @@ client.on('messageCreate', async (msg) => {
 
     let grid;
 
-    // 🎬 ANIMATION
+    /*
+    ━━━━━━━━━━━━━━━━━━━━
+    🎬 ANIMATION
+    ━━━━━━━━━━━━━━━━━━━━
+    */
     for (let i = 0; i < 7; i++) {
 
       grid = [
@@ -165,14 +165,14 @@ ${grid[2].join(' | ')}`
     }
 
     /*
-    ━━━━━━━━━━━━━━━━━━━━
-    🏆 WIN LOGIC
-    ━━━━━━━━━━━━━━━━━━━━
+    ━━━━━━━━━━━━━━━━━━━━━
+    🏆 WIN SYSTEM
+    ━━━━━━━━━━━━━━━━━━━━━
     */
 
     let win = 0;
-    let text = "😢 Verloren";
-    let winLine = null;
+    let result = "😢 Verloren";
+    let winRow = null;
 
     const lines = [
       [[0,0],[0,1],[0,2]],
@@ -190,42 +190,36 @@ ${grid[2].join(' | ')}`
 
       if (a === b && b === c) {
         win = bet * 5;
-        text = "🔥 GEWINN!";
-        winLine = line;
+        result = "🔥 GEWINN!";
+        winRow = [a, b, c];
       }
     }
 
-    // 💎 Bonus
+    // 💎 BONUS
     if (grid.flat().includes('7️⃣')) {
       win += bet * 2;
     }
 
-    /*
-    ━━━━━━━━━━━━━━━━━━━━
-    🟡 VISUAL MARKING (GARANTIERT SICHTBAR)
-    ━━━━━━━━━━━━━━━━━━━━
-    */
-
-    let display = grid.map(row => [...row]);
-
-    if (winLine) {
-      for (let [r, c] of winLine) {
-        display[r][c] = `🟡${display[r][c]}🟡`;
-      }
-    }
-
     add(id, win);
+
+    /*
+    ━━━━━━━━━━━━━━━━━━━━━
+    🎰 FINAL DISPLAY (CASINO STYLE)
+    ━━━━━━━━━━━━━━━━━━━━━
+    */
 
     await message.edit(
 `🎰 SLOT MACHINE 🎰
 
-${display[0].join(' | ')}
-${display[1].join(' | ')}
-${display[2].join(' | ')}
+${grid[0].join(' | ')}
+${grid[1].join(' | ')}
+${grid[2].join(' | ')}
 
-${text}
+${result}
 💰 Gewinn: +${win}
-💰 Kontostand: ${get(id)} Coins`
+💰 Kontostand: ${get(id)} Coins
+
+${winRow ? "🎉 GEWINN REIHE: " + winRow.join(" | ") : ""}`
     );
   }
 });
