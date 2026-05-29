@@ -8,44 +8,60 @@ const client = new Client({
   ]
 });
 
-// 🔥 BOT READY
+const fruits = ['🍒', '🍋', '🍉', '🍇', '🍓', '🍍', '7️⃣'];
+
 client.once('ready', () => {
-  console.log(`✅ Bot online als ${client.user.tag}`);
+  console.log(`Online als ${client.user.tag}`);
 });
 
-// 🎰 SLOT COMMAND
-const fruits = ['🍒', '🍋', '🍉', '🍇', '🍓', '🍍', '7️⃣'];
+function rand() {
+  return fruits[Math.floor(Math.random() * fruits.length)];
+}
 
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
   if (message.content === '!slot') {
 
-    let msg = await message.reply('🎰 Dreht...');
+    let msg = await message.reply('🎰 Spinning...');
 
-    let r1, r2, r3;
+    let grid;
 
     for (let i = 0; i < 8; i++) {
+      grid = [
+        [rand(), rand(), rand()],
+        [rand(), rand(), rand()],
+        [rand(), rand(), rand()]
+      ];
 
-      r1 = fruits[Math.floor(Math.random() * fruits.length)];
-      r2 = fruits[Math.floor(Math.random() * fruits.length)];
-      r3 = fruits[Math.floor(Math.random() * fruits.length)];
+      await msg.edit(
+`🎰 SLOT MACHINE 🎰
 
-      await msg.edit(`🎰 | ${r1} | ${r2} | ${r3} |`);
-      await new Promise(res => setTimeout(res, 300));
+${grid[0].join(' | ')}
+${grid[1].join(' | ')}
+${grid[2].join(' | ')}`
+      );
+
+      await new Promise(r => setTimeout(r, 250));
     }
+
+    let flat = grid.flat();
 
     let result = "😢 Verloren";
 
-    if (r1 === r2 && r2 === r3) {
-      result = "🔥 JACKPOT!";
-    } else if (r1 === '7️⃣' || r2 === '7️⃣' || r3 === '7️⃣') {
-      result = "✨ Lucky 7!";
-    }
+    if (flat[0] === flat[1] && flat[1] === flat[2]) result = "🔥 JACKPOT TOP ROW!";
+    else if (flat.includes('7️⃣')) result = "✨ Lucky 7!";
 
-    msg.edit(`🎰 | ${r1} | ${r2} | ${r3} |\n\n${result}`);
+    msg.edit(
+`🎰 SLOT MACHINE 🎰
+
+${grid[0].join(' | ')}
+${grid[1].join(' | ')}
+${grid[2].join(' | ')}
+
+${result}`
+    );
   }
 });
 
-// 🔑 TOKEN LOGIN (WICHTIG!)
 client.login(process.env.TOKEN);
