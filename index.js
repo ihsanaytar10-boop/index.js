@@ -1,3 +1,4 @@
+console.log("🔥🔥🔥 NEUER CODE WIRD AUSGEFÜHRT 🔥🔥🔥");
 console.log("🎰 CASINO BOT START");
 
 const { Client, GatewayIntentBits } = require("discord.js");
